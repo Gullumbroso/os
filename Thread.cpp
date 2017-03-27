@@ -35,3 +35,7 @@ bool Thread::operator!=(const Thread &other) const
 {
     return this->id != other.id;
 }
+
+void Thread::setState(int s) {
+    state = s;
+}

@@ -11,7 +11,6 @@
 
 
 #define READY 0
-#define RUNNING 1
 #define BLOCKED 2
 
 
@@ -26,6 +25,7 @@ public:
 
     int getId();
     int getState();
+    void setState(int s);
 
     bool operator==(const Thread &other) const;
     bool operator!=(const Thread &other) const;

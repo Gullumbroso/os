@@ -3,5 +3,5 @@ project(ex2)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp Thread.cpp Thread.h uthreads.cpp ThreadManager.cpp ThreadManager.h)
+set(SOURCE_FILES main.cpp Thread.cpp Thread.h uthreads.cpp ThreadManager.cpp ThreadManager.h Scheduler.cpp Scheduler.h)
 add_executable(ex2 ${SOURCE_FILES})
