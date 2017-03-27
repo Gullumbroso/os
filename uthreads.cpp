@@ -36,12 +36,12 @@ void printSystemError(string message)
 
 void exitProgram() {
 
+    exit(0);
 }
 
 void timer_handler(int sig)
 {
     timePassed = 1;
-
 }
 
 int uthread_init(int quantum_usecs)
@@ -71,7 +71,7 @@ int uthread_terminate(int tid)
     // If a thread terminates itself or the main thread is terminated.
     try {
         if (tid == MAIN_THREAD) {
-            throw MAIN_THREAD;
+            exitProgram();
         }
         // TODO add the condition of the thread terminating itself.
     }

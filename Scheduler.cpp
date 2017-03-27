@@ -4,17 +4,17 @@
 
 #include "Scheduler.h"
 
-void Scheduler::timer_handler()
+void timer_handler(int timePassed)
 {
     timePassed = true;
 }
 
-void init_timer(int quantum_usecs) {
+void Scheduler::init_timer(int quantum_usecs) {
 
     // Install timer_handler as the signal handler for SIGVTALRM.
     sa.sa_handler = &timer_handler;
     if (sigaction(SIGVTALRM, &sa,NULL) < 0) {
-        printf("sigaction error.");
+
     }
 }
 

@@ -5,14 +5,20 @@
 #ifndef EX2_SCHEDULER_H
 #define EX2_SCHEDULER_H
 
+
 #include <sys/time.h>
+#include <signal.h>
+
 
 class Scheduler {
 private:
     int quantum;
     bool timePassed;
-    void timer_handler();
+    struct sigaction sa;
     struct itimerval timer;
+
+    void timer_handler();
+    void init_timer(int quantum_usecs);
 
 public:
     Scheduler(int quantum_usecs);
