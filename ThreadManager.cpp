@@ -140,6 +140,11 @@ int ThreadManager::runningThreadID() {
     return readyThreads[0].getId();
 }
 
+int switchThreads()
+{
+
+}
+
 ThreadManager::~ThreadManager() {
 
 }

@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string>
 #include <iostream>
-#include <signal.h>
-#include <sys/time.h>
 #include "uthreads.h"
 #include "ThreadManager.h"
 #include "Scheduler.h"

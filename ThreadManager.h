@@ -22,19 +22,27 @@ private:
     float quantum;
     int maxThreads;
     int syncThreadsCounter;
+
 public:
     ThreadManager(int mt);
+
     int isThreadExist(int tid);
+
     int addThread(void (*f)(void));
+
     int terminateThread(int tid);
+
     int blockThread(int tid);
-    ~ThreadManager();
 
     int resumeThread(int tid);
 
     int syncThread(int tid);
 
     int runningThreadID();
+
+    int switchThreads();
+
+    ~ThreadManager();
 };
 
 
