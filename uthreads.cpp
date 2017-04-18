@@ -48,7 +48,7 @@ int uthread_init(int quantum_usecs)
         printThreadError("Quantum should be a positive integer");
         return -1;
     }
-    Scheduler scheduler = Scheduler(quantum_usecs);
+    Scheduler scheduler = Scheduler(quantum_usecs, tm);
     quantum = 1;
     tm = new ThreadManager(MAX_THREAD_NUM);
     return SUCCESS;

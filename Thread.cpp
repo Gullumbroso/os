@@ -39,3 +39,15 @@ bool Thread::operator!=(const Thread &other) const
 void Thread::setState(int s) {
     state = s;
 }
+
+void Thread::saveState() {
+    int ret_val = sigsetjmp(env, 1);
+}
+
+void Thread::loadState() {
+    siglongjmp(env, 1);
+}
+
+void Thread::sync(Thread &t) {
+    synced.push_back(t);
+}

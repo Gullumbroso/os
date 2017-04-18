@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <vector>
 #include <algorithm>
+#include <setjmp.h>
+#include <signal.h>
+#include <unistd.h>
 #include "Thread.h"
 
 using namespace std;
@@ -16,14 +19,16 @@ using namespace std;
 class ThreadManager
 {
 private:
+    float quantum;
+    int maxThreads;
+    void switchThreads(int tid1);
+
+public:
     vector<Thread> threads;
     vector<Thread> readyThreads;
     vector<Thread> blockedThreads;
-    float quantum;
-    int maxThreads;
     int syncThreadsCounter;
 
-public:
     ThreadManager(int mt);
 
     int isThreadExist(int tid);
@@ -39,8 +44,6 @@ public:
     int syncThread(int tid);
 
     int runningThreadID();
-
-    int switchThreads();
 
     ~ThreadManager();
 };

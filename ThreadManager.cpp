@@ -8,6 +8,63 @@
 #define SUCCESS 0
 #define MAIN_THREAD 0
 #define FAILURE -1
+#define SECOND 1000000
+#define STACK_SIZE 4096
+
+char stack1[STACK_SIZE];
+char stack2[STACK_SIZE];
+
+#ifdef __x86_64__
+/* code for 64 bit Intel arch */
+
+typedef unsigned long address_t;
+#define JB_SP 6
+#define JB_PC 7
+
+/* A translation is required when using an address of a variable.
+   Use this as a black box in your code. */
+address_t translate_address(address_t addr)
+{
+    address_t ret;
+    asm volatile("xor    %%fs:0x30,%0\n"
+            "rol    $0x11,%0\n"
+    : "=g" (ret)
+    : "0" (addr));
+    return ret;
+}
+
+#else
+/* code for 32 bit Intel arch */
+
+typedef unsigned int address_t;
+#define JB_SP 4
+#define JB_PC 5
+
+/* A translation is required when using an address of a variable.
+   Use this as a black box in your code. */
+address_t translate_address(address_t addr)
+{
+    address_t ret;
+    asm volatile("xor    %%gs:0x18,%0\n"
+		"rol    $0x9,%0\n"
+                 : "=g" (ret)
+                 : "0" (addr));
+    return ret;
+}
+
+#endif
+
+void setup(Thread &t)
+{
+    address_t sp, pc;
+
+    sp = (address_t)stack1 + STACK_SIZE - sizeof(address_t);
+    pc = (address_t)t.f;
+    sigsetjmp(t.env, 1);
+    (t.env->__jmpbuf)[JB_SP] = translate_address(sp);
+    (t.env->__jmpbuf)[JB_PC] = translate_address(pc);
+    sigemptyset(&t.env->__saved_mask);
+}
 
 ThreadManager::ThreadManager(int mt) {
     syncThreadsCounter = 0;
@@ -30,6 +87,7 @@ int ThreadManager::isThreadExist(int tid) {
 int ThreadManager::addThread(void (*f)(void)) {
     int idx = 0;
     auto it = threads.begin();
+    setup(f);
     for (it; it != threads.end(); it++) {
         if (idx == maxThreads) {
             return FAILURE;
@@ -55,7 +113,18 @@ int ThreadManager::terminateThread(int tid) {
     if (state == READY) {
         auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
         if (pos != readyThreads.end()) {
-            readyThreads.erase(pos);
+
+            // Check if the
+            if (syncThreadsCounter > 0) {
+                Thread nextThread = blockedThreads[0];
+                blockedThreads.erase(blockedThreads.begin());
+                readyThreads.at()
+                syncThreadsCounter--;
+
+            } else {
+                readyThreads.erase(pos);
+            }
+
         } else {
             assert("There is a problem with the readyThreads.");
         }
@@ -121,17 +190,20 @@ int ThreadManager::syncThread(int tid) {
     }
 
     Thread thread = threads[tid];
-    Thread running_thread = readyThreads[0];
+    Thread runningThread = readyThreads[0];
+
+    // Save the current state of the running thread
+    runningThread.saveState();
 
     // Move the running thread to the blocked list
     readyThreads.erase(readyThreads.begin());
-    blockedThreads.insert(blockedThreads.begin(), running_thread);
-
-    // Increment the sync threads counter
-    syncThreadsCounter++;
+    blockedThreads.insert(blockedThreads.begin(), runningThread);
 
     // Move the thread with id tid into the running position
     readyThreads.insert(readyThreads.begin(), thread);
+
+    // Increment the sync threads counter
+    syncThreadsCounter++;
 
     return SUCCESS;
 }
@@ -140,10 +212,30 @@ int ThreadManager::runningThreadID() {
     return readyThreads[0].getId();
 }
 
-int switchThreads()
+void ThreadManager::switchThreads(int tid)
 {
+    if (tid == runningThreadID()) {
+        return;
+    }
 
+    Thread t1 = threads[tid];
+    Thread running_thread = readyThreads[0];
+
+    // Move the running thread to the blocked list
+    readyThreads.erase(readyThreads.begin());
+    blockedThreads.insert(blockedThreads.begin(), running_thread);
+
+    // Move the thread with id tid into the running position
+    readyThreads.insert(readyThreads.begin(), t1);
+
+    int ret_val = sigsetjmp(running_thread.env, 1);
+    if (ret_val == 1) {
+        return;
+    }
+    siglongjmp(t1.env, 1);
 }
+
+
 
 ThreadManager::~ThreadManager() {
 

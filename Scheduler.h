@@ -11,6 +11,9 @@
 #include <iostream>
 #include <sys/time.h>
 #include <signal.h>
+#include "ThreadManager.h"
+#include "uthreads.h"
+
 
 using namespace std;
 
@@ -21,12 +24,13 @@ private:
     static bool timePassed;
     struct sigaction sa;
     struct itimerval timer;
+    ThreadManager *threadManager;
 
     void timer_handler(int timePassed);
     void init_timer();
 
 public:
-    Scheduler(int quantum_usecs);
+    Scheduler(int quantum_usecs, ThreadManager *tm);
     int getQuantum();
     void nextStep();
     ~Scheduler();

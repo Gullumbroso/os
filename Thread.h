@@ -8,6 +8,10 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
+#include <setjmp.h>
+#include <vector>
+
+using namespace std;
 
 
 #define READY 0
@@ -18,14 +22,22 @@ class Thread
 {
 private:
     int state, id;
-    void (*f)(void);
+    vector<Thread> synced;
+
 public:
     Thread(int id, void (*f)(void));
     ~Thread();
 
+    void (*f)(void);
+    sigjmp_buf env;
+
     int getId();
     int getState();
     void setState(int s);
+    void sync(Thread &t);
+
+    void saveState();
+    void loadState();
 
     bool operator==(const Thread &other) const;
     bool operator!=(const Thread &other) const;
