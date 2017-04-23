@@ -9,6 +9,8 @@ Thread::Thread(int id, void (*f)(void))
     this->state = READY;
     this->id = id;
     this->f = f;
+    this->isSynced = false;
+    this->isBlocked = false;
 }
 
 int Thread::getId()

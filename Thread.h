@@ -22,7 +22,6 @@ class Thread
 {
 private:
     int state, id;
-    vector<Thread> synced;
 
 public:
     Thread(int id, void (*f)(void));
@@ -31,10 +30,14 @@ public:
     void (*f)(void);
     sigjmp_buf env;
 
+    vector<Thread> synced;
+
     int getId();
     int getState();
     void setState(int s);
     void sync(Thread &t);
+    bool isSynced;
+    bool isBlocked;
 
     void saveState();
     void loadState();

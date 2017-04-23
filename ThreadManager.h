@@ -27,7 +27,6 @@ public:
     vector<Thread> threads;
     vector<Thread> readyThreads;
     vector<Thread> blockedThreads;
-    int syncThreadsCounter;
 
     ThreadManager(int mt);
 
@@ -44,6 +43,8 @@ public:
     int syncThread(int tid);
 
     int runningThreadID();
+
+    void releaseSynced(int tid);
 
     ~ThreadManager();
 };

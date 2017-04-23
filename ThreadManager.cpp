@@ -103,27 +103,26 @@ int ThreadManager::addThread(void (*f)(void)) {
 }
 
 int ThreadManager::terminateThread(int tid) {
+
+    if (tid == 0) {
+        exit(0);
+    }
+
     if (isThreadExist(tid) == FAILURE) {
         return FAILURE;
     }
 
     Thread thread = threads[tid];
+
     int state = thread.getState();
+
+    tm.releaseSynced();
 
     if (state == READY) {
         auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
         if (pos != readyThreads.end()) {
 
-            // Check if the
-            if (syncThreadsCounter > 0) {
-                Thread nextThread = blockedThreads[0];
-                blockedThreads.erase(blockedThreads.begin());
-                readyThreads.at()
-                syncThreadsCounter--;
 
-            } else {
-                readyThreads.erase(pos);
-            }
 
         } else {
             assert("There is a problem with the readyThreads.");
@@ -171,9 +170,15 @@ int ThreadManager::resumeThread(int tid) {
     }
 
     Thread thread = threads[tid];
+
     int state = thread.getState();
 
     if (state == BLOCKED) {
+        thread.isBlocked = false;
+        if (thread.isSynced) {
+            // The thread should stay in the BLOCKED list since it is waiting for a sync.
+            return SUCCESS;
+        }
         auto pos = find(blockedThreads.begin(), blockedThreads.end(), thread);
         readyThreads.push_back(thread);
         blockedThreads.erase(pos);
@@ -192,18 +197,20 @@ int ThreadManager::syncThread(int tid) {
     Thread thread = threads[tid];
     Thread runningThread = readyThreads[0];
 
+    if (runningThread.getId() == tid) {
+        return FAILURE;
+    }
+
     // Save the current state of the running thread
     runningThread.saveState();
 
+    // Add the running thread to the sync list of the selected thread.
+    thread.sync(runningThread);
+    runningThread.isSynced = true;
+
     // Move the running thread to the blocked list
     readyThreads.erase(readyThreads.begin());
-    blockedThreads.insert(blockedThreads.begin(), runningThread);
-
-    // Move the thread with id tid into the running position
-    readyThreads.insert(readyThreads.begin(), thread);
-
-    // Increment the sync threads counter
-    syncThreadsCounter++;
+    blockedThreads.push_back(runningThread);
 
     return SUCCESS;
 }
@@ -233,6 +240,10 @@ void ThreadManager::switchThreads(int tid)
         return;
     }
     siglongjmp(t1.env, 1);
+}
+
+void ThreadManager::releaseSynced(int tid) {
+
 }
 
 
