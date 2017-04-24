@@ -3,6 +3,7 @@
 //
 
 #include <assert.h>
+#include <stdlib.h>
 #include "ThreadManager.h"
 
 #define SUCCESS 0
@@ -66,12 +67,16 @@ void setup(Thread &t)
     sigemptyset(&t.env->__saved_mask);
 }
 
-ThreadManager::ThreadManager(int mt)
+ThreadManager::ThreadManager(int mt, int quantum_usecs)
 {
     maxThreads = mt;
     Thread mainThread = Thread(0, nullptr);
     threads.push_back(mainThread);
     readyThreads.push_back(mainThread);
+
+    quantum = 1;
+    quantumUsecs = quantum_usecs;
+    init_timer();
 }
 
 int ThreadManager::isThreadExist(int tid)
@@ -87,10 +92,73 @@ int ThreadManager::isThreadExist(int tid)
     return SUCCESS;
 }
 
+void ThreadManager::timer_handler(int sig)
+{
+    quantum++;
+
+    // Perform a thread switch with the next thread according to the nextThread function.
+    auto readyThreads = readyThreads;
+    int replacedThreadID = readyThreads[0].getId();
+    int nextThreadID = nextThread();
+    switchThreads(nextThreadID);
+
+    // Move the replaced thread to the back of the ready list.
+    Thread replacedThread = threads[replacedThreadID];
+    readyThreads.push_back(replacedThread);
+}
+
+void ThreadManager::init_timer()
+{
+    // Install timer_handler as the signal handler for SIGVTALRM.
+    sa.sa_handler = ThreadManager::timer_handler;
+    if (sigaction(SIGVTALRM, &sa, NULL) < 0)
+    {
+        cerr << "sigaction error." << '\n';
+    }
+
+    // Configure the timer to expire after quantum_usecs sec... */
+    timer.it_value.tv_sec = 0;        // first time interval, seconds part
+    timer.it_value.tv_usec = quantumUsecs;        // first time interval
+
+    // configure the timer to expire every 3 sec after that.
+    timer.it_interval.tv_sec = 0;    // following time intervals, seconds part
+    timer.it_interval.tv_usec = quantumUsecs;    // following time intervals, microseconds part
+
+    // Start a virtual timer. It counts down whenever this process is executing.
+    if (setitimer(ITIMER_VIRTUAL, &timer, NULL))
+    {
+        cerr << "setitimer error." << '\n';
+    }
+}
+
+int ThreadManager::block(sigset_t *newSet, sigset_t *oldSet) {
+    if (sigaddset(newSet, SIGVTALRM) < 0)
+    {
+        return FAILURE;
+    }
+    if (sigprocmask(SIG_SETMASK, newSet, oldSet) < 0)
+    {
+        return FAILURE;
+    }
+    return 0;
+}
+
+int ThreadManager::unblock(sigset_t *restoreSet) {
+    if (sigprocmask(SIG_SETMASK, restoreSet, NULL) < 0)
+    {
+        return FAILURE;
+    }
+    return 0;
+}
+
 int ThreadManager::addThread(void (*f)(void))
 {
     int idx = 0;
     auto it = threads.begin();
+
+    sigset_t set, old;
+    block(&set, &old);
+
     for (it; it != threads.end(); it++)
     {
         if (idx == maxThreads)
@@ -103,10 +171,22 @@ int ThreadManager::addThread(void (*f)(void))
             *it = thread;
             readyThreads.push_back(thread);
             setup(thread);
+
+            if (unblock(&old) < 0)
+            {
+                return FAILURE;
+            }
+
             return idx;
         }
         idx++;
     }
+
+    if (unblock(&old) < 0)
+    {
+        return FAILURE;
+    }
+
     return FAILURE;
 }
 
@@ -127,6 +207,12 @@ int ThreadManager::terminateThread(int tid)
     Thread thread = threads[tid];
 
     int state = thread.getState();
+
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
+    {
+        return FAILURE;
+    }
 
     releaseSynced(tid);
 
@@ -162,6 +248,11 @@ int ThreadManager::terminateThread(int tid)
 
     eraseThread(tid);
 
+    if (unblock(&old) < 0)
+    {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
@@ -183,6 +274,12 @@ int ThreadManager::blockThread(int tid)
 
     int state = thread.getState();
 
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
+    {
+        return FAILURE;
+    }
+
     if (state == READY)
     {
         auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
@@ -195,12 +292,16 @@ int ThreadManager::blockThread(int tid)
         return SUCCESS;
     }
 
+    if (unblock(&old) < 0)
+    {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
 int ThreadManager::resumeThread(int tid, bool isSynced)
 {
-
     if (isThreadExist(tid) == FAILURE)
     {
         return FAILURE;
@@ -209,6 +310,12 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
     Thread thread = threads[tid];
 
     int state = thread.getState();
+
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
+    {
+        return FAILURE;
+    }
 
     if (state == BLOCKED)
     {
@@ -235,13 +342,23 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
         thread.setState(READY);
     }
 
+    if (unblock(&old) < 0)
+    {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
 int ThreadManager::syncThread(int tid)
 {
-
     if (isThreadExist(tid) == FAILURE || tid == MAIN_THREAD)
+    {
+        return FAILURE;
+    }
+
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
     {
         return FAILURE;
     }
@@ -265,6 +382,11 @@ int ThreadManager::syncThread(int tid)
     readyThreads.erase(readyThreads.begin());
     blockedThreads.push_back(runningThread);
 
+    if (unblock(&old) < 0)
+    {
+        return FAILURE;
+    }
+
     return SUCCESS;
 }
 
@@ -284,6 +406,9 @@ void ThreadManager::releaseSynced(int tid)
     Thread thread = threads[tid];
     vector<Thread> synced = thread.synced;
     vector<Thread> toErase;
+
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
 
     for (auto it = synced.begin(); it != synced.end(); it++)
     {
@@ -306,6 +431,8 @@ void ThreadManager::releaseSynced(int tid)
         auto pos = find(thread.synced.begin(), thread.synced.end(), *it);
         thread.synced.erase(pos);
     }
+
+    unblock(&old);
 }
 
 void ThreadManager::switchThreads(int tid)
@@ -315,6 +442,11 @@ void ThreadManager::switchThreads(int tid)
         return;
     }
 
+    sigset_t set, old;
+    if (block(&set, &old) < 0)
+
+    quantum++;
+
     Thread t1 = threads[tid];
     Thread runningThread = readyThreads[0];
 
@@ -322,14 +454,22 @@ void ThreadManager::switchThreads(int tid)
     readyThreads.erase(readyThreads.begin());
 
     // Move the thread with id tid into the running position
+    t1.quantums++;
     readyThreads.insert(readyThreads.begin(), t1);
     t1.loadState();
+
+    unblock(&old);
 }
 
 int ThreadManager::nextThread()
 {
     int nextThreadID = readyThreads[1].getId();
     return nextThreadID;
+}
+
+int ThreadManager::getTotalQuantum()
+{
+    return quantum;
 }
 
 ThreadManager::~ThreadManager()

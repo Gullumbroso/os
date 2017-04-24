@@ -34,6 +34,7 @@ public:
 
     int getId();
     int getState();
+    int quantums;
     void setState(int s);
     void sync(Thread &t);
     bool isSynced;

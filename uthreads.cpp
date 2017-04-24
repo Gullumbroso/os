@@ -7,7 +7,6 @@
 #include <iostream>
 #include "uthreads.h"
 #include "ThreadManager.h"
-#include "Scheduler.h"
 
 using namespace std;
 
@@ -19,9 +18,6 @@ using namespace std;
 
 
 ThreadManager *tm;
-Scheduler *scheduler;
-
-int timePassed = 0;
 
 void printThreadError(string message)
 {
@@ -34,13 +30,7 @@ void printSystemError(string message)
 }
 
 void exitProgram() {
-
     exit(0);
-}
-
-void timer_handler(int sig)
-{
-    timePassed = 1;
 }
 
 int uthread_init(int quantum_usecs)
@@ -50,9 +40,7 @@ int uthread_init(int quantum_usecs)
         printThreadError("Quantum should be a positive integer");
         return -1;
     }
-    scheduler = new Scheduler(quantum_usecs, tm);
-    scheduler->setQuantom();
-    tm = new ThreadManager(MAX_THREAD_NUM);
+    tm = new ThreadManager(MAX_THREAD_NUM, quantum_usecs);
     return SUCCESS;
 }
 
@@ -73,7 +61,6 @@ int uthread_terminate(int tid)
         if (tid == MAIN_THREAD) {
             exitProgram();
         }
-        // TODO add the condition of the thread terminating itself.
     }
     catch (int e) {
         if (e == MAIN_THREAD) {
@@ -129,7 +116,7 @@ int uthread_get_tid() {
 }
 
 int uthread_get_total_quantums() {
-    return scheduler->getQuantum();
+    return tm->getTotalQuantum();
 }
 
 int uthread_get_quantums(int tid){
@@ -137,7 +124,7 @@ int uthread_get_quantums(int tid){
     if (res == FAILURE){
         return FAILURE;
     }
-
+    return tm->threads[tid].quantums;
 }
 
 

@@ -33,7 +33,6 @@ public:
     Scheduler(int quantum_usecs, ThreadManager *tm);
     int getQuantum();
     void setQuantom();
-    void nextStep();
     ~Scheduler();
 };
 

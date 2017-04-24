@@ -8,6 +8,7 @@ Thread::Thread(int id, void (*f)(void))
 {
     this->state = READY;
     this->id = id;
+    this->quantums = 0;
     this->f = f;
     this->isSynced = false;
     this->isBlocked = false;

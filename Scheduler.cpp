@@ -51,11 +51,6 @@ Scheduler::Scheduler(int quantum_usecs, ThreadManager *tm)
     init_timer();
 }
 
-void Scheduler::nextStep()
-{
-
-}
-
 void Scheduler::setQuantom() {
     this->quantum += 1;
 }

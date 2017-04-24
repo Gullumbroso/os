@@ -6,9 +6,12 @@
 #define EX2_THREADMANAGER_H
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 #include <setjmp.h>
+#include <sys/time.h>
 #include <signal.h>
 #include <unistd.h>
 #include "Thread.h"
@@ -19,16 +22,24 @@ using namespace std;
 class ThreadManager
 {
 private:
-    float quantum;
     int maxThreads;
     void eraseThread(int tid);
+    int quantum, quantumUsecs;
+    struct sigaction sa;
+    struct itimerval timer;
+
+    void init_timer();
+    void timer_handler(int sig);
+
+    int block(sigset_t *newSet, sigset_t *oldSet);
+    int unblock(sigset_t *restoreSet);
 
 public:
     vector<Thread> threads;
     vector<Thread> readyThreads;
     vector<Thread> blockedThreads;
 
-    ThreadManager(int mt);
+    ThreadManager(int mt, int quantum_usecs);
 
     int isThreadExist(int tid);
 
@@ -49,6 +60,8 @@ public:
     void switchThreads(int tid);
 
     int nextThread();
+
+    int getTotalQuantum();
 
     ~ThreadManager();
 };
