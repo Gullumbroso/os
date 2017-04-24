@@ -32,7 +32,6 @@ private:
 public:
     Scheduler(int quantum_usecs, ThreadManager *tm);
     int getQuantum();
-    void nextStep();
     ~Scheduler();
 };
 

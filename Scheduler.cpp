@@ -4,31 +4,32 @@
 
 #include "Scheduler.h"
 
+
+Scheduler::Scheduler(int quantum_usecs, ThreadManager *tm)
+{
+    quantum = 1;
+    quantumUsecs = quantum_usecs;
+    threadManager = tm;
+    init_timer();
+}
+
 void Scheduler::timer_handler(int sig)
 {
-    // Move the current thread to the back of the Ready list after saving its state
+    quantum++;
+
+    // Perform a thread switch with the next thread according to the nextThread function.
     auto readyThreads = threadManager->readyThreads;
-    Thread runningThread = readyThreads[0];
-    runningThread.saveState();
-    readyThreads.erase(readyThreads.begin());
-    readyThreads.push_back(runningThread);
+    int replacedThreadID = readyThreads[0].getId();
+    int nextThreadID = threadManager->nextThread();
+    threadManager->switchThreads(nextThreadID);
 
-    // Check what thread should be run now
-    if (threadManager->syncThreadsCounter > 0) {
-        auto blockedThreads = threadManager->blockedThreads;
-        Thread nextThread = blockedThreads[0];
-        blockedThreads.erase(blockedThreads.begin());
-        readyThreads.insert(readyThreads.begin(), nextThread);
-        threadManager->syncThreadsCounter--;
-
-    } else {
-        auto
-    }
+    // Move the replaced thread to the back of the ready list.
+    Thread replacedThread = threadManager->threads[replacedThreadID];
+    threadManager->readyThreads.push_back(replacedThread);
 }
 
 void Scheduler::init_timer()
 {
-
     // Install timer_handler as the signal handler for SIGVTALRM.
     sa.sa_handler = Scheduler::timer_handler;
     if (sigaction(SIGVTALRM, &sa, NULL) < 0)
@@ -50,17 +51,3 @@ void Scheduler::init_timer()
         cerr << "setitimer error." << '\n';
     }
 }
-
-Scheduler::Scheduler(int quantum_usecs, ThreadManager *tm)
-{
-    quantum = 1;
-    quantumUsecs = quantum_usecs;
-    threadManager = tm;
-    init_timer();
-}
-
-void Scheduler::nextStep()
-{
-
-}
-
