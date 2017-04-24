@@ -106,7 +106,7 @@ int uthread_block(int tid) {
 
 int uthread_resume(int tid) {
 
-    int result = tm->resumeThread(tid);
+    int result = tm->resumeThread(tid, false);
     if (result == FAILURE) {
         printThreadError(INVALID_IDX);
         return FAILURE;

@@ -39,7 +39,7 @@ public:
     bool isSynced;
     bool isBlocked;
 
-    void saveState();
+    int saveState();
     void loadState();
 
     bool operator==(const Thread &other) const;

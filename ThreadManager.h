@@ -21,7 +21,7 @@ class ThreadManager
 private:
     float quantum;
     int maxThreads;
-    void switchThreads(int tid1);
+    void eraseThread(int tid);
 
 public:
     vector<Thread> threads;
@@ -38,13 +38,17 @@ public:
 
     int blockThread(int tid);
 
-    int resumeThread(int tid);
+    int resumeThread(int tid, bool isSynced);
 
     int syncThread(int tid);
 
     int runningThreadID();
 
     void releaseSynced(int tid);
+
+    void switchThreads(int tid);
+
+    int nextThread();
 
     ~ThreadManager();
 };
