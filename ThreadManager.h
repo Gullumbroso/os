@@ -11,8 +11,6 @@
 #include <algorithm>
 #include <iostream>
 #include <setjmp.h>
-#include <sys/time.h>
-#include <signal.h>
 #include <unistd.h>
 #include "Thread.h"
 
@@ -24,20 +22,19 @@ class ThreadManager
 private:
     int maxThreads;
     void eraseThread(int tid);
-    int quantum, quantumUsecs;
-    struct sigaction sa;
-    struct itimerval timer;
+    int quantumUsecs;
 
-    void init_timer();
-    void timer_handler(int sig);
+    void (*handler)(int);
 
     int block(sigset_t *newSet, sigset_t *oldSet);
     int unblock(sigset_t *restoreSet);
 
 public:
-    vector<Thread> threads;
-    vector<Thread> readyThreads;
-    vector<Thread> blockedThreads;
+    vector<Thread*> threads;
+    vector<Thread*> readyThreads;
+    vector<Thread*> blockedThreads;
+
+    int quantum;
 
     ThreadManager(int mt, int quantum_usecs);
 

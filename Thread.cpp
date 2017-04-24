@@ -8,8 +8,9 @@ Thread::Thread(int id, void (*f)(void))
 {
     this->state = READY;
     this->id = id;
-    this->quantums = 0;
+    this->quantums = 1;
     this->f = f;
+    saveState();
     this->isSynced = false;
     this->isBlocked = false;
 }
@@ -44,13 +45,13 @@ void Thread::setState(int s) {
 }
 
 int Thread::saveState() {
-    return sigsetjmp(env, 1);
+    return sigsetjmp(env, 0);
 }
 
 void Thread::loadState() {
     siglongjmp(env, 1);
 }
 
-void Thread::sync(Thread &t) {
+void Thread::sync(Thread *t) {
     synced.push_back(t);
 }

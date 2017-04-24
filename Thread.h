@@ -30,13 +30,13 @@ public:
     void (*f)(void);
     sigjmp_buf env;
 
-    vector<Thread> synced;
+    vector<Thread *> synced;
 
     int getId();
     int getState();
     int quantums;
     void setState(int s);
-    void sync(Thread &t);
+    void sync(Thread *t);
     bool isSynced;
     bool isBlocked;
 

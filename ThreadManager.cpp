@@ -9,7 +9,6 @@
 #define SUCCESS 0
 #define MAIN_THREAD 0
 #define FAILURE -1
-#define SECOND 1000000
 #define STACK_SIZE 4096
 
 char stack1[STACK_SIZE];
@@ -55,10 +54,10 @@ address_t translate_address(address_t addr)
 
 #endif
 
-void setup(Thread &t)
+void setup(Thread *thread)
 {
     address_t sp, pc;
-
+    Thread t = *thread;
     sp = (address_t) stack1 + STACK_SIZE - sizeof(address_t);
     pc = (address_t) t.f;
     sigsetjmp(t.env, 1);
@@ -70,65 +69,22 @@ void setup(Thread &t)
 ThreadManager::ThreadManager(int mt, int quantum_usecs)
 {
     maxThreads = mt;
-    Thread mainThread = Thread(0, nullptr);
+    Thread *mainThread = new Thread(0, nullptr);
     threads.push_back(mainThread);
     readyThreads.push_back(mainThread);
 
     quantum = 1;
     quantumUsecs = quantum_usecs;
-    init_timer();
 }
 
-int ThreadManager::isThreadExist(int tid)
-{
-    if (tid >= maxThreads || tid < 0)
-    {
+int ThreadManager::isThreadExist(int tid) {
+    if (tid >= maxThreads || tid < 0) {
         return FAILURE;
     }
-    if (threads[tid] == nullptr)
-    {
+    if (threads[tid] == nullptr) {
         return FAILURE;
     }
     return SUCCESS;
-}
-
-void ThreadManager::timer_handler(int sig)
-{
-    quantum++;
-
-    // Perform a thread switch with the next thread according to the nextThread function.
-    auto readyThreads = readyThreads;
-    int replacedThreadID = readyThreads[0].getId();
-    int nextThreadID = nextThread();
-    switchThreads(nextThreadID);
-
-    // Move the replaced thread to the back of the ready list.
-    Thread replacedThread = threads[replacedThreadID];
-    readyThreads.push_back(replacedThread);
-}
-
-void ThreadManager::init_timer()
-{
-    // Install timer_handler as the signal handler for SIGVTALRM.
-    sa.sa_handler = ThreadManager::timer_handler;
-    if (sigaction(SIGVTALRM, &sa, NULL) < 0)
-    {
-        cerr << "sigaction error." << '\n';
-    }
-
-    // Configure the timer to expire after quantum_usecs sec... */
-    timer.it_value.tv_sec = 0;        // first time interval, seconds part
-    timer.it_value.tv_usec = quantumUsecs;        // first time interval
-
-    // configure the timer to expire every 3 sec after that.
-    timer.it_interval.tv_sec = 0;    // following time intervals, seconds part
-    timer.it_interval.tv_usec = quantumUsecs;    // following time intervals, microseconds part
-
-    // Start a virtual timer. It counts down whenever this process is executing.
-    if (setitimer(ITIMER_VIRTUAL, &timer, NULL))
-    {
-        cerr << "setitimer error." << '\n';
-    }
 }
 
 int ThreadManager::block(sigset_t *newSet, sigset_t *oldSet) {
@@ -159,7 +115,7 @@ int ThreadManager::addThread(void (*f)(void))
     sigset_t set, old;
     block(&set, &old);
 
-    for (it; it != threads.end(); it++)
+    for (; it != threads.end(); it++)
     {
         if (idx == maxThreads)
         {
@@ -167,7 +123,7 @@ int ThreadManager::addThread(void (*f)(void))
         }
         else if (*it == nullptr)
         {
-            Thread thread = Thread(idx, f);
+            Thread *thread = new Thread(idx, f);
             *it = thread;
             readyThreads.push_back(thread);
             setup(thread);
@@ -182,31 +138,29 @@ int ThreadManager::addThread(void (*f)(void))
         idx++;
     }
 
+    Thread *newThread = new Thread(idx, f);
+    threads.push_back(newThread);
+    readyThreads.push_back(newThread);
+    setup(newThread);
+
     if (unblock(&old) < 0)
     {
         return FAILURE;
     }
 
-    return FAILURE;
+    return idx;
 }
 
 int ThreadManager::terminateThread(int tid)
 {
-
-    if (tid == 0)
-    {
-        // TODO: Release all the memory!
-        exit(0);
-    }
-
     if (isThreadExist(tid) == FAILURE)
     {
         return FAILURE;
     }
 
-    Thread thread = threads[tid];
+    Thread *thread = threads[tid];
 
-    int state = thread.getState();
+    int state = thread->getState();
 
     sigset_t set, old;
     if (block(&set, &old) < 0)
@@ -258,7 +212,7 @@ int ThreadManager::terminateThread(int tid)
 
 void ThreadManager::eraseThread(int tid)
 {
-    Thread thread = threads[tid];
+    Thread *thread = threads[tid];
     delete thread;
     threads[tid] = nullptr;
 }
@@ -270,9 +224,9 @@ int ThreadManager::blockThread(int tid)
         return FAILURE;
     }
 
-    Thread thread = threads[tid];
+    Thread *thread = threads[tid];
 
-    int state = thread.getState();
+    int state = thread->getState();
 
     sigset_t set, old;
     if (block(&set, &old) < 0)
@@ -285,7 +239,7 @@ int ThreadManager::blockThread(int tid)
         auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
         blockedThreads.push_back(thread);
         readyThreads.erase(pos);
-        thread.setState(BLOCKED);
+        thread->setState(BLOCKED);
     }
     else if (state == BLOCKED)
     {
@@ -307,9 +261,9 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
         return FAILURE;
     }
 
-    Thread thread = threads[tid];
+    Thread *thread = threads[tid];
 
-    int state = thread.getState();
+    int state = thread->getState();
 
     sigset_t set, old;
     if (block(&set, &old) < 0)
@@ -320,8 +274,8 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
     if (state == BLOCKED)
     {
         if (isSynced) {
-            thread.isSynced = false;
-            if (thread.isBlocked)
+            thread->isSynced = false;
+            if (thread->isBlocked)
             {
                 // The thread should stay in the BLOCKED list since it was also blocked manually.
                 return SUCCESS;
@@ -329,8 +283,8 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
         }
         else
         {
-            thread.isBlocked = false;
-            if (thread.isSynced)
+            thread->isBlocked = false;
+            if (thread->isSynced)
             {
                 // The thread should stay in the BLOCKED list since it is waiting for a sync.
                 return SUCCESS;
@@ -339,7 +293,7 @@ int ThreadManager::resumeThread(int tid, bool isSynced)
         auto pos = find(blockedThreads.begin(), blockedThreads.end(), thread);
         readyThreads.push_back(thread);
         blockedThreads.erase(pos);
-        thread.setState(READY);
+        thread->setState(READY);
     }
 
     if (unblock(&old) < 0)
@@ -363,20 +317,20 @@ int ThreadManager::syncThread(int tid)
         return FAILURE;
     }
 
-    Thread thread = threads[tid];
-    Thread runningThread = readyThreads[0];
+    Thread *thread = threads[tid];
+    Thread *runningThread = readyThreads[0];
 
-    if (runningThread.getId() == tid)
+    if (runningThread->getId() == tid)
     {
         return FAILURE;
     }
 
     // Save the current state of the running thread
-    runningThread.saveState();
+    runningThread->saveState();
 
     // Add the running thread to the sync list of the selected thread.
-    thread.sync(runningThread);
-    runningThread.isSynced = true;
+    thread->sync(runningThread);
+    runningThread->isSynced = true;
 
     // Move the running thread to the blocked list
     readyThreads.erase(readyThreads.begin());
@@ -392,7 +346,7 @@ int ThreadManager::syncThread(int tid)
 
 int ThreadManager::runningThreadID()
 {
-    return readyThreads[0].getId();
+    return readyThreads[0]->getId();
 }
 
 void ThreadManager::releaseSynced(int tid)
@@ -403,17 +357,17 @@ void ThreadManager::releaseSynced(int tid)
         assert("An id of a thread that does not exist was sent to the releaseSynced method.");
     }
 
-    Thread thread = threads[tid];
-    vector<Thread> synced = thread.synced;
-    vector<Thread> toErase;
+    Thread *thread = threads[tid];
+    vector<Thread *> synced = thread->synced;
+    vector<Thread *> toErase;
 
     sigset_t set, old;
     if (block(&set, &old) < 0)
 
     for (auto it = synced.begin(); it != synced.end(); it++)
     {
-        Thread t = *it;
-        int threadID = t.getId();
+        Thread *t = *it;
+        int threadID = t->getId();
         if (isThreadExist(threadID) == FAILURE)
         {
             // The thread was already been terminated.
@@ -421,15 +375,15 @@ void ThreadManager::releaseSynced(int tid)
         }
         else
         {
-            resumeThread(t.getId(), true);
+            resumeThread(t->getId(), true);
         }
     }
 
     // Erase all the obsolete threads from the synced list.
     for (auto it = toErase.begin(); it != toErase.end(); it++)
     {
-        auto pos = find(thread.synced.begin(), thread.synced.end(), *it);
-        thread.synced.erase(pos);
+        auto pos = find(thread->synced.begin(), thread->synced.end(), *it);
+        thread->synced.erase(pos);
     }
 
     unblock(&old);
@@ -437,34 +391,39 @@ void ThreadManager::releaseSynced(int tid)
 
 void ThreadManager::switchThreads(int tid)
 {
+    Thread *t1 = threads[tid];
+    Thread *runningThread = readyThreads[0];
+
+    t1->quantums++;
+    quantum++;
+
     if (tid == runningThreadID())
     {
         return;
     }
 
     sigset_t set, old;
-    if (block(&set, &old) < 0)
+    block(&set, &old);
 
-    quantum++;
-
-    Thread t1 = threads[tid];
-    Thread runningThread = readyThreads[0];
-
-    int result = runningThread.saveState();
+    runningThread->saveState();
     readyThreads.erase(readyThreads.begin());
-
-    // Move the thread with id tid into the running position
-    t1.quantums++;
-    readyThreads.insert(readyThreads.begin(), t1);
-    t1.loadState();
+    t1->loadState();
 
     unblock(&old);
 }
 
 int ThreadManager::nextThread()
 {
-    int nextThreadID = readyThreads[1].getId();
-    return nextThreadID;
+    Thread *thread = readyThreads[1];
+    if (thread == nullptr)
+    {
+        return runningThreadID();
+    }
+    else
+    {
+        int nextThreadID = readyThreads[1]->getId();
+        return nextThreadID;
+    }
 }
 
 int ThreadManager::getTotalQuantum()
