@@ -64,3 +64,11 @@ void Scheduler::nextStep()
 
 }
 
+void Scheduler::setQuantom() {
+    this->quantum += 1;
+}
+
+int Scheduler::getQuantum() {
+    return this->quantum;
+}
+

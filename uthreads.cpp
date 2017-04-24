@@ -19,7 +19,8 @@ using namespace std;
 
 
 ThreadManager *tm;
-int quantum;
+Scheduler *scheduler;
+
 int timePassed = 0;
 
 void printThreadError(string message)
@@ -44,12 +45,13 @@ void timer_handler(int sig)
 
 int uthread_init(int quantum_usecs)
 {
+
     if (quantum_usecs <= 0) {
         printThreadError("Quantum should be a positive integer");
         return -1;
     }
-    Scheduler scheduler = Scheduler(quantum_usecs, tm);
-    quantum = 1;
+    scheduler = new Scheduler(quantum_usecs, tm);
+    scheduler->setQuantom();
     tm = new ThreadManager(MAX_THREAD_NUM);
     return SUCCESS;
 }
@@ -127,12 +129,16 @@ int uthread_get_tid() {
 }
 
 int uthread_get_total_quantums() {
-
-
-
-    return SUCCESS;
+    return scheduler->getQuantum();
 }
 
+int uthread_get_quantums(int tid){
+    int res = tm->isThreadExist(tid);
+    if (res == FAILURE){
+        return FAILURE;
+    }
+
+}
 
 
 
