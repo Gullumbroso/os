@@ -22,6 +22,7 @@ class Thread
 {
 private:
     int state, id;
+    void setup();
 
 public:
     Thread(int id, void (*f)(void));

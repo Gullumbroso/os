@@ -7,12 +7,13 @@
 #include <iostream>
 #include <signal.h>
 #include <sys/time.h>
+#include <assert.h>
 #include "uthreads.h"
 #include "ThreadManager.h"
 
 using namespace std;
 
-
+#define CONVERT 1000000
 #define SUCCESS 0
 #define FAILURE -1
 #define MAIN_THREAD 0
@@ -22,8 +23,7 @@ using namespace std;
 ThreadManager *tm;
 struct sigaction sa;
 struct itimerval timer;
-int counter;
-int quantumUsecs;
+int quantumUsecs, usec, sec;
 
 void printThreadError(string message)
 {
@@ -42,16 +42,48 @@ void exitProgram() {
 
 void timer_handler(int sig)
 {
-    // Perform a thread switch with the next thread according to the nextThread function.
-    int replacedThreadID = tm->readyThreads[0]->getId();
-    int nextThreadID = tm->nextThread();
-    tm->switchThreads(nextThreadID);
-
-    // Move the replaced thread to the back of the ready list.
-    if (nextThreadID != replacedThreadID)
+    if (sig == SIGVTALRM)
     {
+        int replacedThreadID = tm->runningThreadID();
+        int nextThreadID = tm->nextThread();
+
+//        // Check if the next therad is not the current one.
+//        if (nextThreadID == replacedThreadID)
+//        {
+//            return;
+//        }
+
         Thread *replacedThread = tm->threads[replacedThreadID];
+        Thread *newRunning = tm->threads[nextThreadID];
+
+        // Move the replaced thread to the back of the ready list.
+        tm->readyThreads.erase(tm->readyThreads.begin());
         tm->readyThreads.push_back(replacedThread);
+
+        newRunning->quantums++;
+        tm->quantum++;
+
+        // reset timer
+        struct itimerval timer;
+        getitimer(ITIMER_VIRTUAL, &timer);
+        timer.it_value.tv_sec = sec;
+        timer.it_value.tv_usec = usec;
+        timer.it_interval.tv_sec = 0;
+        timer.it_interval.tv_usec = 0;
+
+        int ret_val = sigsetjmp(replacedThread->env, 1);
+        if (ret_val == 2)
+        {
+            return;
+        }
+
+        // Start a virtual timer. It counts down whenever this process is executing.
+        if (setitimer (ITIMER_VIRTUAL, &timer, NULL)) {
+            cerr << "setitimer error." << '\n';
+            return;
+        }
+
+        siglongjmp(newRunning->env, 2);
     }
 }
 
@@ -59,18 +91,22 @@ void init_timer()
 {
     // Install timer_handler as the signal handler for SIGVTALRM.
     sa.sa_handler = timer_handler;
+    sa.sa_flags = 0;
     if (sigaction(SIGVTALRM, &sa, NULL) < 0)
     {
         cerr << "sigaction error." << '\n';
     }
 
+    usec = quantumUsecs % CONVERT;
+    sec = (quantumUsecs - usec) / CONVERT;
+
     // Configure the timer to expire after quantum_usecs sec... */
-    timer.it_value.tv_sec = 0;        // first time interval, seconds part
-    timer.it_value.tv_usec = quantumUsecs;        // first time interval
+    timer.it_value.tv_sec = sec;        // first time interval, seconds part
+    timer.it_value.tv_usec = usec;        // first time interval
 
     // configure the timer to expire every 3 sec after that.
-    timer.it_interval.tv_sec = 0;    // following time intervals, seconds part
-    timer.it_interval.tv_usec = quantumUsecs;    // following time intervals, microseconds part
+    timer.it_interval.tv_sec = sec;    // following time intervals, seconds part
+    timer.it_interval.tv_usec = usec;    // following time intervals, microseconds part
 
     // Start a virtual timer. It counts down whenever this process is executing.
     if (setitimer(ITIMER_VIRTUAL, &timer, NULL))

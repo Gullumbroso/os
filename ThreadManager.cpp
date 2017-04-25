@@ -9,62 +9,7 @@
 #define SUCCESS 0
 #define MAIN_THREAD 0
 #define FAILURE -1
-#define STACK_SIZE 4096
 
-char stack1[STACK_SIZE];
-char stack2[STACK_SIZE];
-
-#ifdef __x86_64__
-/* code for 64 bit Intel arch */
-
-typedef unsigned long address_t;
-#define JB_SP 6
-#define JB_PC 7
-
-/* A translation is required when using an address of a variable.
-   Use this as a black box in your code. */
-address_t translate_address(address_t addr)
-{
-    address_t ret;
-    asm volatile("xor    %%fs:0x30,%0\n"
-            "rol    $0x11,%0\n"
-    : "=g" (ret)
-    : "0" (addr));
-    return ret;
-}
-
-#else
-/* code for 32 bit Intel arch */
-
-typedef unsigned int address_t;
-#define JB_SP 4
-#define JB_PC 5
-
-/* A translation is required when using an address of a variable.
-   Use this as a black box in your code. */
-address_t translate_address(address_t addr)
-{
-    address_t ret;
-    asm volatile("xor    %%gs:0x18,%0\n"
-        "rol    $0x9,%0\n"
-                 : "=g" (ret)
-                 : "0" (addr));
-    return ret;
-}
-
-#endif
-
-void setup(Thread *thread)
-{
-    address_t sp, pc;
-    Thread t = *thread;
-    sp = (address_t) stack1 + STACK_SIZE - sizeof(address_t);
-    pc = (address_t) t.f;
-    sigsetjmp(t.env, 1);
-    (t.env->__jmpbuf)[JB_SP] = translate_address(sp);
-    (t.env->__jmpbuf)[JB_PC] = translate_address(pc);
-    sigemptyset(&t.env->__saved_mask);
-}
 
 ThreadManager::ThreadManager(int mt, int quantum_usecs)
 {
@@ -96,7 +41,7 @@ int ThreadManager::block(sigset_t *newSet, sigset_t *oldSet) {
     {
         return FAILURE;
     }
-    return 0;
+    return SUCCESS;
 }
 
 int ThreadManager::unblock(sigset_t *restoreSet) {
@@ -104,7 +49,7 @@ int ThreadManager::unblock(sigset_t *restoreSet) {
     {
         return FAILURE;
     }
-    return 0;
+    return SUCCESS;
 }
 
 int ThreadManager::addThread(void (*f)(void))
@@ -126,7 +71,6 @@ int ThreadManager::addThread(void (*f)(void))
             Thread *thread = new Thread(idx, f);
             *it = thread;
             readyThreads.push_back(thread);
-            setup(thread);
 
             if (unblock(&old) < 0)
             {
@@ -141,7 +85,6 @@ int ThreadManager::addThread(void (*f)(void))
     Thread *newThread = new Thread(idx, f);
     threads.push_back(newThread);
     readyThreads.push_back(newThread);
-    setup(newThread);
 
     if (unblock(&old) < 0)
     {
@@ -161,7 +104,7 @@ int ThreadManager::terminateThread(int tid)
     Thread *thread = threads[tid];
 
     int state = thread->getState();
-
+    int nextThreadID = -1;
     sigset_t set, old;
     if (block(&set, &old) < 0)
     {
@@ -177,8 +120,7 @@ int ThreadManager::terminateThread(int tid)
         {
             if (pos == readyThreads.begin()) {
                 // This is the running thread
-                int nextThreadID = nextThread();
-                switchThreads(nextThreadID);
+                nextThreadID = nextThread();
             }
             readyThreads.erase(pos);
         }
@@ -201,6 +143,13 @@ int ThreadManager::terminateThread(int tid)
     }
 
     eraseThread(tid);
+
+    if (nextThreadID > -1)
+    {
+        // The thread that was deleted was itself. Load the next thread env.
+        Thread *running = threads[runningThreadID()];
+        siglongjmp(running->env, 1);
+    }
 
     if (unblock(&old) < 0)
     {
@@ -389,27 +338,23 @@ void ThreadManager::releaseSynced(int tid)
     unblock(&old);
 }
 
-void ThreadManager::switchThreads(int tid)
+void ThreadManager::switchThreads(Thread *running, Thread *next)
 {
-    Thread *t1 = threads[tid];
-    Thread *runningThread = readyThreads[0];
-
-    t1->quantums++;
-    quantum++;
-
-    if (tid == runningThreadID())
+    if (running == nullptr || next == nullptr)
+    {
+        assert("A null pointer was sent to swtichThreads function.");
+    }
+    if (running->getId() == next->getId())
     {
         return;
     }
 
-    sigset_t set, old;
-    block(&set, &old);
-
-    runningThread->saveState();
-    readyThreads.erase(readyThreads.begin());
-    t1->loadState();
-
-    unblock(&old);
+    int ret_val = sigsetjmp(running->env, 1);
+    if (ret_val == 2)
+    {
+        return;
+    }
+    siglongjmp(next->env, 2);
 }
 
 int ThreadManager::nextThread()

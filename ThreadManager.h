@@ -54,7 +54,7 @@ public:
 
     void releaseSynced(int tid);
 
-    void switchThreads(int tid);
+    void switchThreads(Thread *running, Thread *next);
 
     int nextThread();
 
