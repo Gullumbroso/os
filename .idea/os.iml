@@ -2,11 +2,9 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/ThreadManager.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/uthreads.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/ThreadManager.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Thread.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Thread.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/uthreads.cpp" isTestSource="false" />
