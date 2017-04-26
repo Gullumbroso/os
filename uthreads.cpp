@@ -1,21 +1,3 @@
-//
-// Created by Gilad Lumbroso on 21/03/2017.
-//
-
-#include <stdlib.h>
-#include <string>
-#include <iostream>
-#include <signal.h>
-#include <sys/time.h>
-#include <assert.h>
-#include "uthreads.h"
-#include "ThreadManager.h"
-
-#define STACK_SIZE 4096
-
-char stack1[STACK_SIZE];
-char stack2[STACK_SIZE];
-
 #ifdef __x86_64__
 /* code for 64 bit Intel arch */
 
@@ -23,6 +5,7 @@ typedef unsigned long address_t;
 #define JB_SP 6
 #define JB_PC 7
 
+#define DEBUG 0
 /* A translation is required when using an address of a variable.
    Use this as a black box in your code. */
 address_t translate_address(address_t addr) {
@@ -33,6 +16,7 @@ address_t translate_address(address_t addr) {
     : "0" (addr));
     return ret;
 }
+
 
 #else
 /* code for 32 bit Intel arch */
@@ -52,8 +36,18 @@ address_t translate_address(address_t addr)
                  : "0" (addr));
     return ret;
 }
-
 #endif
+
+#include <stdlib.h>
+#include <string>
+#include <iostream>
+#include <signal.h>
+#include <sys/time.h>
+#include <assert.h>
+#include "uthreads.h"
+#include "Thread.h"
+
+#define STACK_SIZE 4096
 
 using namespace std;
 
@@ -65,14 +59,16 @@ using namespace std;
 #define JUMP_RETURN_VAL 3
 
 
-struct sigaction sa;
-struct itimerval timer;
-int quantum, quantumUsecs, usec, sec;
+static struct sigaction sa;
+static struct itimerval timer;
+static int quantum, quantumUsecs, usec, sec;
 
 
-vector<Thread *> threads;
-vector<Thread *> readyThreads;
-vector<Thread *> blockedThreads;
+// Datasets
+static vector<Thread *> threads;
+static vector<Thread *> readyThreads;
+static vector<Thread *> blockedThreads;
+static vector<Thread *> toDelete;
 
 
 // Functions
@@ -86,6 +82,8 @@ int resume(int tid, bool isSynced);
 
 int nextThreadID();
 
+void deleteAll();
+
 
 void printThreadError(string message) {
     cerr << "thread library error: " << message << "\n";
@@ -96,8 +94,17 @@ void printSystemError(string message) {
 }
 
 void exitProgram() {
-    // TODO: Release memory!
+    deleteAll();
     exit(SUCCESS);
+}
+
+void deleteAll() {
+    for (auto it = toDelete.begin(); it != toDelete.end(); it++) {
+        Thread *t = *it;
+        if (t != nullptr) {
+            delete t;
+        }
+    }
 }
 
 void quantum_end(int sig) {
@@ -127,10 +134,19 @@ void quantum_end(int sig) {
         return;
     }
 
+    if (running->synced.size() > 0) {
+        releaseSynced(running->id);
+    }
+
     if (sig == SIGUSR1) {
         // Terminate - delete the current thread and move the next one to the running position.
         readyThreads.erase(readyThreads.begin());
-        delete running;
+        threads[running->id] = nullptr;
+        toDelete.push_back(running);
+    } else if (sig == SIGUSR2) {
+        // Block - move the current thread to the blocked list.
+        blockedThreads.push_back(running);
+        readyThreads.erase(readyThreads.begin());
     }
 
     // Start a virtual timer. It counts down whenever this process is executing.
@@ -142,7 +158,29 @@ void quantum_end(int sig) {
     siglongjmp(next->env, JUMP_RETURN_VAL);
 }
 
-void init_timer() {
+void threadSetup(Thread *t) {
+    address_t sp, pc;
+    sp = (address_t) t->stack + STACK_SIZE - sizeof(address_t);
+    pc = (address_t) t->f;
+    sigsetjmp(t->env, 1);
+    (t->env->__jmpbuf)[JB_SP] = translate_address(sp);
+    (t->env->__jmpbuf)[JB_PC] = translate_address(pc);
+    sigemptyset(&(t->env)->__saved_mask);
+}
+
+int uthread_init(int quantum_usecs) {
+
+    if (quantum_usecs <= 0) {
+        printThreadError("Quantum should be a positive integer");
+        return -1;
+    }
+
+    quantumUsecs = quantum_usecs;
+    Thread *mainThread = new Thread(0, nullptr);
+    threads.push_back(mainThread);
+    readyThreads.push_back(mainThread);
+    quantum = 1;
+
     // Install quantum_end as the signal handler for SIGVTALRM.
     sa.sa_handler = quantum_end;
 
@@ -165,30 +203,7 @@ void init_timer() {
     if (setitimer(ITIMER_VIRTUAL, &timer, NULL)) {
         cerr << "setitimer error." << '\n';
     }
-}
 
-void threadSetup(Thread *t) {
-    address_t sp, pc;
-    sp = (address_t) t->stack + STACK_SIZE - sizeof(address_t);
-    pc = (address_t) t->f;
-    sigsetjmp(t->env, 1);
-    (t->env->__jmpbuf)[JB_SP] = translate_address(sp);
-    (t->env->__jmpbuf)[JB_PC] = translate_address(pc);
-    sigemptyset(&(t->env)->__saved_mask);
-}
-
-int uthread_init(int quantum_usecs) {
-    if (quantum_usecs <= 0) {
-        printThreadError("Quantum should be a positive integer");
-        return -1;
-    }
-    quantumUsecs = quantum_usecs;
-    Thread *mainThread = new Thread(0, nullptr);
-    threads.push_back(mainThread);
-    readyThreads.push_back(mainThread);
-    quantum = 1;
-    quantumUsecs = quantum_usecs;
-    init_timer();
     return SUCCESS;
 }
 
@@ -203,13 +218,14 @@ int isThreadExist(int tid) {
 }
 
 int uthread_spawn(void (*f)(void)) {
-    int idx = 0;
-    auto it = threads.begin();
 
     sigset_t set, old;
     sigemptyset(&set);
     sigaddset(&set, SIGVTALRM);
     sigprocmask(SIG_SETMASK, &set, &old);
+
+    int idx = 0;
+    auto it = threads.begin();
 
     for (; it != threads.end(); it++) {
         if (idx >= MAX_THREAD_NUM) {
@@ -239,11 +255,17 @@ int uthread_spawn(void (*f)(void)) {
 
 void eraseThread(int tid) {
     Thread *thread = threads[tid];
-    delete thread;
+    toDelete.push_back(thread);
     threads[tid] = nullptr;
 }
 
 int uthread_terminate(int tid) {
+
+    sigset_t set, old;
+    sigemptyset(&set);
+    sigaddset(&set, SIGVTALRM);
+    sigprocmask(SIG_SETMASK, &set, &old);
+
     if (isThreadExist(tid) == FAILURE) {
         return FAILURE;
     }
@@ -257,13 +279,6 @@ int uthread_terminate(int tid) {
 
     int state = thread->getState();
     int nextID = -1;
-
-    sigset_t set, old;
-    sigemptyset(&set);
-    sigaddset(&set, SIGVTALRM);
-    sigprocmask(SIG_SETMASK, &set, &old);
-
-    releaseSynced(tid);
 
     if (state == READY) {
         auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
@@ -313,13 +328,17 @@ int uthread_block(int tid) {
     sigaddset(&set, SIGVTALRM);
     sigprocmask(SIG_SETMASK, &set, &old);
 
+    thread->isBlocked = true;
+
     if (state == READY) {
-        auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
-        blockedThreads.push_back(thread);
-        readyThreads.erase(pos);
         thread->setState(BLOCKED);
-    } else if (state == BLOCKED) {
-        return SUCCESS;
+        if (tid == readyThreads[0]->id) {
+            quantum_end(SIGUSR2);
+        } else {
+            auto pos = find(readyThreads.begin(), readyThreads.end(), thread);
+            blockedThreads.push_back(thread);
+            readyThreads.erase(pos);
+        }
     }
 
     sigprocmask(SIG_SETMASK, &old, NULL);
@@ -346,12 +365,14 @@ int resume(int tid, bool isSynced) {
             thread->isSynced = false;
             if (thread->isBlocked) {
                 // The thread should stay in the BLOCKED list since it was also blocked manually.
+                sigprocmask(SIG_SETMASK, &old, NULL);
                 return SUCCESS;
             }
         } else {
             thread->isBlocked = false;
             if (thread->isSynced) {
                 // The thread should stay in the BLOCKED list since it is waiting for a sync.
+                sigprocmask(SIG_SETMASK, &old, NULL);
                 return SUCCESS;
             }
         }
@@ -378,7 +399,7 @@ int uthread_resume(int tid) {
 }
 
 int uthread_sync(int tid) {
-    if (isThreadExist(tid) == FAILURE || tid == MAIN_THREAD) {
+    if (isThreadExist(tid) == FAILURE || readyThreads[0]->id == MAIN_THREAD) {
         return FAILURE;
     }
 
@@ -394,19 +415,12 @@ int uthread_sync(int tid) {
         return FAILURE;
     }
 
-    // Save the current state of the running thread
-    int ret_val = sigsetjmp(runningThread->env, 1);
-    if (ret_val == JUMP_RETURN_VAL) {
-        return SUCCESS;
-    }
-
     // Add the running thread to the sync list of the selected thread.
-    thread->sync(runningThread);
     runningThread->isSynced = true;
+    thread->sync(runningThread);
 
-    // Move the running thread to the blocked list
-    readyThreads.erase(readyThreads.begin());
-    blockedThreads.push_back(runningThread);
+    runningThread->setState(BLOCKED);
+    quantum_end(SIGUSR2);
 
     sigprocmask(SIG_SETMASK, &old, NULL);
 

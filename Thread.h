@@ -10,6 +10,9 @@
 #include <signal.h>
 #include <setjmp.h>
 #include <vector>
+#include <ostream>
+#include <stdlib.h>
+#include <algorithm>
 
 using namespace std;
 
@@ -40,9 +43,6 @@ public:
     void sync(Thread *t);
     bool isSynced;
     bool isBlocked;
-
-    int saveState();
-    void loadState();
 
     bool operator==(const Thread &other) const;
     bool operator!=(const Thread &other) const;

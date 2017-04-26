@@ -1,0 +1,49 @@
+avishadler,gullumbroso
+Avishay Adler 203538657, Gilad Lumbroso 204781694
+EX: 2
+
+FILES:
+README -            that file
+uthreads.cpp -      the library
+Thread.h -          header of the thread class
+Thread.cpp -        the thread class
+Makefile
+
+REMARKS:
+
+    (▰˘◡˘▰)  THANK  (✿◠‿◠)  YOU ｡◕ ‿ ◕｡ !
+
+ANSWERS:
+
+    Q1: one usage of user-level threads is when the user wants to preform 2 different tasks,
+    and the problem is that one must sync with the another ,
+    the user can use user-level threads and control the running order-
+    the user should open some threads and for the sync part make a thread
+    and use uthreads_sync to sync it with the other thread.
+    since the operating system does the sync process, in Kernel-Level threads the user can't do it.
+
+
+    Q2:  Advantages: 1. If a process crushes, the other processes can still run,
+    while if this is one process with number of threads, all the threads crush if the process crushes.
+    2. it is more safe if every process has its own memory.
+
+    Disadvantages:
+    1. the Switching process between processes has more overhead
+    2. sharing memory cost using some system calls since every process has to have its own memory.
+
+
+    Q3:
+    The KB sends interrupt (user typing) to the operating system and it care about it and updates the Shell.
+    The Shell shows the text that the user writes. when the user presses the Enter button
+    it sends a system call to the operating system.
+    The operating system sends SIGKILL for terminating the application.
+
+    Q4:
+    "Virtual time" is the running time of the process code only.
+    The "Real time" combined from the 'Virtual time' and the time that takes for OS operations
+    that are not part of the process to run. - the real time that takes to execute the program.
+
+    Examples:
+    Virtual time - for the OS - switch between threads
+    Real time - for the user - include all it's overhead, for knowing how much time
+    it takes to run a program (complexity).

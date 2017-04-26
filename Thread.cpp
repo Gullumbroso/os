@@ -22,11 +22,6 @@ Thread::Thread(int id, void (*f)(void))
     this->isBlocked = false;
 }
 
-Thread::~Thread()
-{
-
-}
-
 int Thread::getState()
 {
     return state;
@@ -48,4 +43,8 @@ void Thread::setState(int s) {
 
 void Thread::sync(Thread *t) {
     synced.push_back(t);
+}
+
+Thread::~Thread()
+{
 }
