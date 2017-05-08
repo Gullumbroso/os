@@ -22,9 +22,11 @@ using namespace std;
 string search_str;
 vector<string> paths;
 
+vector<string> searchInPath(string path_to_check , string key_word);
 
 class DirNameKey: public k1Base {
 
+    public:
     string dirName;
 
     DirNameKey(string dn) {
@@ -38,7 +40,7 @@ class DirNameKey: public k1Base {
 };
 
 class SearchTermValue: public v1Base {
-
+public:
     string searchTerm;
 
     SearchTermValue(string st) {
@@ -46,8 +48,9 @@ class SearchTermValue: public v1Base {
     }
 };
 
-class FileNameKey: public k2Base, k3Base {
+class FileNameKey: public k2Base, public k3Base {
 
+public:
     string fileName;
 
     FileNameKey(string fn) {
@@ -62,6 +65,7 @@ class FileNameKey: public k2Base, k3Base {
 
 
 class SingleCountValue: public v2Base {
+public:
 
     int count;
 
@@ -72,6 +76,7 @@ class SingleCountValue: public v2Base {
 
 
 class FileCountValue: public v3Base {
+public:
 
     int count;
 
@@ -86,12 +91,23 @@ class MapReduce: public MapReduceBase {
     MapReduce() {}
 
     void Map(const k1Base *const key, const v1Base *const val) const override {
+        DirNameKey *const dirName = (DirNameKey *const) key;
+        SearchTermValue *const word = (SearchTermValue *const) val;
 
+        vector<string> res = searchInPath(dirName->dirName,word->searchTerm);
+        for(auto it = res.begin(); it<res.end() ; it++){
+            FileNameKey *file = new FileNameKey(*it);
+            Emit2(file,new SingleCountValue());
+        }
     }
+
 
     void Reduce(const k2Base *const key, const V2_VEC &vals) const override {
-
+        FileNameKey *const fileName = (FileNameKey *const) key;
+        FileCountValue *const count = new FileCountValue((int) vals.size());
+        Emit3(fileName, count);
     }
+
 
 };
 
