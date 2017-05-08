@@ -13,6 +13,7 @@ using namespace std;
 
 
 vector<pthread_t *> execMapThreads;
+vector<void*> threadsArgs;
 
 
 void prepareMappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel);
@@ -28,12 +29,14 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
     return OUT_ITEMS_VEC();
 }
 
-void prepareMappingPhase(MapReduceBase $mapReduceBase, int multiThreadLevel)
+void prepareMappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
 {
+
     // Create <multiThreadLevel> number of threads
     for (int i = 0; i < multiThreadLevel; i++)
     {
         pthread_t *thread;
-        int res = pthread_create(thread, NULL, )
+        threadsArgs.push_back()
+        int res = pthread_create(thread, NULL, mapReduceBase.Map, )
     }
 }
