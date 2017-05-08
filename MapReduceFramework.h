@@ -1,7 +1,7 @@
 #ifndef MAPREDUCEFRAMEWORK_H
 #define MAPREDUCEFRAMEWORK_H
 
-#include "../../Downloads/MapReduceClient.h"
+#include "MapReduceClient.h"
 #include <utility>
 
 typedef std::pair<k1Base*, v1Base*> IN_ITEM;
