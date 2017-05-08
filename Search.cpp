@@ -37,6 +37,15 @@ class DirNameKey: public k1Base {
     }
 };
 
+class SearchTermValue: public v1Base {
+
+    string searchTerm;
+
+    SearchTermValue(string st) {
+        searchTerm = st;
+    }
+};
+
 class FileNameKey: public k2Base, k3Base {
 
     string fileName;
