@@ -22,12 +22,10 @@ typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
 #define CHUNK_SIZE 10
 
 
+// GLOBAL VARIABLES
 IN_ITEMS_VEC k1v1Container;
 SHUFFLE_VEC k2v2Container;
-int k1v1Index = 0;
 
-// GLOBAL VARIABLES
-IN_ITEMS_VEC k1v1Container, k2v2Container;
 
 vector<pthread_t *> execMapThreads;
 vector<void*> threadsArgs;
@@ -59,6 +57,7 @@ void init()
 {
     k1v1Index = 0;
     k1v1Mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 }
 
