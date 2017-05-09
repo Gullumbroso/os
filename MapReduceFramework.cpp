@@ -9,19 +9,29 @@
 #include "MapReduceFramework.h"
 #include <pthread.h>
 #include <iostream>
+#include <semaphore.h>
 
 using namespace std;
+typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
+typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
+
+
 
 #define SUCCESS 0
 #define FAILURE 1
 #define CHUNK_SIZE 10
 
 
+IN_ITEMS_VEC k1v1Container;
+SHUFFLE_VEC k2v2Container;
+int k1v1Index = 0;
+
 // GLOBAL VARIABLES
 IN_ITEMS_VEC k1v1Container, k2v2Container;
 
 vector<pthread_t *> execMapThreads;
 vector<void*> threadsArgs;
+sem_t *semaphore;
 
 int k1v1Index;
 pthread_mutex_t k1v1Mutex;
@@ -106,4 +116,13 @@ void *mapExecFunc(void *mrb)
     }
 
     pthread_exit(NULL);
+}
+
+
+void shuffle(SHUFFLE_VEC &shuffle_vec){
+
+
+
+    // if we don't need the semaphore anymore.
+    sem_destroy(semaphore);
 }
