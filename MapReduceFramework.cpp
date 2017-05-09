@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <iostream>
 #include <semaphore.h>
+#include <stdlib.h>
 
 using namespace std;
 typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
@@ -25,11 +26,12 @@ typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
 // GLOBAL VARIABLES
 IN_ITEMS_VEC k1v1Container;
 SHUFFLE_VEC k2v2Container;
+pthread_t shuffleThread;
 
 
 vector<pthread_t *> execMapThreads;
 vector<void*> threadsArgs;
-sem_t *semaphore;
+sem_t semaphore;
 
 int k1v1Index;
 pthread_mutex_t k1v1Mutex;
@@ -58,6 +60,13 @@ void init()
     k1v1Index = 0;
     k1v1Mutex = PTHREAD_MUTEX_INITIALIZER;
 
+    // creates the shuffle thread
+    sem_init(&semaphore, 0, 1);
+    int res = pthread_create(&shuffleThread, NULL, shuffle, &k2v2Container);
+    if (res < 0)
+    {
+        exitWithError("pthread_create");
+    }
 
 }
 
@@ -118,10 +127,8 @@ void *mapExecFunc(void *mrb)
 }
 
 
-void shuffle(SHUFFLE_VEC &shuffle_vec){
+void *shuffle(void *args){
+    int res = sem_wait(&semaphore);
 
-
-
-    // if we don't need the semaphore anymore.
-    sem_destroy(semaphore);
+    pthread_exit(NULL);
 }
