@@ -7,17 +7,12 @@
 #include <string>
 #include <vector>
 #include "MapReduceFramework.h"
-#include <pthread.h>
+#include "ExecMapThread.h"
 #include <iostream>
 #include <semaphore.h>
 #include <map>
 
 using namespace std;
-typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
-typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
-typedef pair<k2Base*,vector<v2Base*>> SHUFFLE_RET;
-typedef vector<SHUFFLE_RET> SHUFFLE_RET_VEC;
-
 
 
 #define SUCCESS 0
@@ -31,22 +26,23 @@ SHUFFLE_VEC k2v2Container;
 SHUFFLE_RET_VEC shuffleRetVec;
 pthread_t shuffleThread;
 
-vector<pthread_t *> execMapThreads;
-vector<SHUFFLE_VEC> execMapContainers;
+
+vector<ExecMapThread *> execMapThreads;
 vector<void*> threadsArgs;
-sem_t semaphore;
+sem_t shuffleSem;
 
 int k1v1Index;
 
-map<pthread_t, int> pthreadToContainer;
+map<pthread_t, ExecMapThread *> pthreadToThreadObject;
 
 // MUTEXES
-pthread_mutex_t k1v1Mutex;
+pthread_mutex_t k1v1_mutex;
 pthread_mutex_t pthreadToContainer_mutex;
 
 // METHODS
 void prepareMappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel);
 void *mapExecFunc();
+void shuffleAdd(k2Base *k2, v2Base *v2);
 
 
 /**
@@ -66,19 +62,22 @@ void exitWithError(string failingFunc)
 void init()
 {
     k1v1Index = 0;
-    k1v1Mutex = PTHREAD_MUTEX_INITIALIZER;
+    k1v1_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-    // Create the shuffle thread
-    sem_init(&semaphore, 0, 1);
-    int res = pthread_create(&shuffleThread, NULL, shuffle, &k2v2Container);
+    // Create the shuffleFunc thread
+    sem_init(&shuffleSem, 0, 1);
+    int res = pthread_create(&shuffleThread, NULL, shuffleFunc, &k2v2Container);
     if (res < 0)
     {
         exitWithError("pthread_create");
     }
 
+//    // Create the execMapContainers mutex
+//    execMapContainers_mutex = PTHREAD_MUTEX_INITIALIZER;
+
     // Create and lock the ptheradToContainer_mutex
     pthreadToContainer_mutex = PTHREAD_MUTEX_INITIALIZER;
-    int res = pthread_mutex_lock(&pthreadToContainer_mutex);
+    res = pthread_mutex_lock(&pthreadToContainer_mutex);
     if (res < 0)
     {
         exitWithError("pthread_mutex_lock");
@@ -109,28 +108,23 @@ void prepareMappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
 {
     // Create <multiThreadLevel> number of threads, if needed
     int numOfThreadsCount = 0;
-    int containerIdx = 0;
+
     while (numOfThreadsCount < k1v1Container.size() && (int) execMapThreads.size < multiThreadLevel)
     {
-        pthread_t thread;
+        ExecMapThread *t = new ExecMapThread();
 
-        int res = pthread_create(&thread, NULL, mapExecFunc, &mapReduceBase);
+        int res = pthread_create(&(t->thread), NULL, mapExecFunc, &mapReduceBase);
         if (res < 0)
         {
             exitWithError("pthread_create");
         }
 
-        execMapThreads.push_back(&thread);
-
-        // Create the corresponding container
-        SHUFFLE_VEC container;
-        execMapContainers.push_back(container);
+        execMapThreads.push_back(t);
 
         numOfThreadsCount += CHUNK_SIZE;
 
-        // Creating the pthreadToContainer map
-        pthreadToContainer.insert(pair<pthread_t, int>(thread, containerIdx));
-        containerIdx++;
+        // Creating the pthreadToThreadObject map
+        pthreadToThreadObject.insert(pair<pthread_t, ExecMapThread *>(t->thread, t));
     }
 }
 
@@ -156,7 +150,11 @@ void *mapExecFunc(void *mrb)
 
     while (k1v1Index < containerSize) {
 
-        pthread_mutex_lock(&k1v1Mutex);
+        res = pthread_mutex_lock(&k1v1_mutex);
+        if (res < 0)
+        {
+            exitWithError("pthread_mutex_lock");
+        }
 
         // Check if the k1v1Index value hasn't been modified since the entrance to the loop
         if (k1v1Index >= containerSize)
@@ -167,7 +165,7 @@ void *mapExecFunc(void *mrb)
         int chunkSize = (int) min(containerSize - k1v1Index, CHUNK_SIZE);
         k1v1Index += chunkSize;
 
-        pthread_mutex_unlock(&k1v1Mutex);
+        pthread_mutex_unlock(&k1v1_mutex);
 
         // Take a batch from the container
         vector<IN_ITEM>::const_iterator first = k1v1Container.begin() + k1v1Index;
@@ -193,25 +191,79 @@ void *mapExecFunc(void *mrb)
 void Emit2(k2Base *k2Base, v2Base *v2Base)
 {
     pthread_t threadID = pthread_self();
-    int idx = pthreadToContainer.at(threadID);
-    SHUFFLE_VEC container = execMapContainers[idx];
-    container.push_back(pair(k2Base, v2Base));
+    ExecMapThread *t = pthreadToThreadObject.at(threadID);
+    SHUFFLE_VEC *container = &(t->container);
 
+    // Lock the container before the addition
+    int res = pthread_mutex_lock(&(t->containerMutex));
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_lock");
+    }
 
+    container->push_back(pair(k2Base, v2Base));
+
+    res = pthread_mutex_lock(&(t->containerMutex));
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_unlock");
+    }
+
+    res = sem_post(&shuffleSem);
+
+    if (res < 0)
+    {
+        exitWithError("sem_post");
+    }
 }
 
+/**
+ * @brief The function that is run by the shuffle thread.
+ * @param args The function's arguments.
+ */
+void *shuffleFunc(void *args) {
 
-void *shuffle(void *args){
-    int res = sem_wait(&semaphore);
+    int res = sem_wait(&shuffleSem);
+    if (res < 0)
+    {
+        exitWithError("sem_wait");
+    }
+
+    for (auto it = execMapThreads.begin(); it < execMapThreads.end(); it++)
+    {
+        ExecMapThread *t = *it;
+        SHUFFLE_VEC *container = &(t->container);
+        if (!t->container.empty())
+        {
+            SHUFFLE_ITEM pair;
+            res = pthread_mutex_lock(&(t->containerMutex));
+            if (res < 0)
+            {
+                exitWithError("pthread_mutex_lock");
+            }
+
+            pair = container->back();
+            container->pop_back();
+
+            res = pthread_mutex_unlock(&(t->containerMutex));
+            if (res < 0)
+            {
+                exitWithError("pthread_mutex_unlock");
+            }
+
+            shuffleAdd(pair.first, pair.second);
+        }
+    }
 
     pthread_exit(NULL);
 }
+
 
 void Emit3(k3Base *k3Base, v3Base *v3Base) {
 
 }
 
-int shuffleAdd(k2Base *k2, v2Base *v2){
+void shuffleAdd(k2Base *k2, v2Base *v2){
     bool addPair = true;
     for(auto it = shuffleRetVec.begin(); it < shuffleRetVec.end() ; it++){
         SHUFFLE_RET pair = *it;
