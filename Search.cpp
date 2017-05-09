@@ -4,6 +4,7 @@
 
 #define SUCCESS 0
 #define FAILURE 1
+#define MULTI_THERAD_LEVEL 4
 
 #include <stdlib.h>
 #include <string>
@@ -88,8 +89,6 @@ public:
 
 class MapReduce: public MapReduceBase {
 
-    MapReduce() {}
-
     void Map(const k1Base *const key, const v1Base *const val) const override {
         DirNameKey *const dirName = (DirNameKey *const) key;
         SearchTermValue *const word = (SearchTermValue *const) val;
@@ -107,8 +106,6 @@ class MapReduce: public MapReduceBase {
         FileCountValue *const count = new FileCountValue((int) vals.size());
         Emit3(fileName, count);
     }
-
-
 };
 
 
@@ -139,8 +136,6 @@ vector<string> searchInPath(string path_to_check , string key_word){
 }
 
 
-
-
 int main(int argc, char *argv[]) {
     if (argc < 2)
     {
@@ -149,9 +144,19 @@ int main(int argc, char *argv[]) {
     else
     {
         search_str = argv[1];
-        paths.insert(paths.end(), argv+2, argv+argc);
+        paths.insert(paths.end(), argv + 2, argv+argc);
     }
 
+    // prepare the IN_ITEMS_VEC for the runMapReduceFramework function
+    IN_ITEMS_VEC k1v1Container;
+    for (auto it = paths.begin(); it < paths.end(); it++)
+    {
+        k1v1Container.push_back(pair(*it, search_str));
+    }
+
+    MapReduce mapReduce;
+
+    RunMapReduceFramework(mapReduce, k1v1Container, MULTI_THERAD_LEVEL, true);
 
     return 0;
 }
