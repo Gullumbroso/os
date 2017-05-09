@@ -6,16 +6,23 @@
 #include "vector"
 #include "MapReduceFramework.h"
 #include <pthread.h>
+#include <semaphore.h>
 
 using namespace std;
+typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
+typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
+
+
 
 #define CHUNK_SIZE 10
 
 
-IN_ITEMS_VEC k1v1Container, k2v2Container;
+IN_ITEMS_VEC k1v1Container;
+SHUFFLE_VEC k2v2Container;
 int k1v1Index = 0;
 vector<pthread_t *> execMapThreads;
 vector<void*> threadsArgs;
+sem_t *semaphore;
 
 
 void prepareMappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel);
@@ -68,4 +75,13 @@ void *mapExecFunc(void *initIdx)
 
         }
     }
+}
+
+
+void shuffle(SHUFFLE_VEC &shuffle_vec){
+
+
+
+    // if we don't need the semaphore anymore.
+    sem_destroy(semaphore);
 }
