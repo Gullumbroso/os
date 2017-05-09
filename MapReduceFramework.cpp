@@ -15,6 +15,8 @@
 using namespace std;
 typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
 typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
+typedef pair<k2Base*,vector<v2Base*>> SHUFFLE_RET;
+typedef vector<SHUFFLE_RET> SHUFFLE_RET_VEC;
 
 
 
@@ -26,8 +28,8 @@ typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
 // GLOBAL VARIABLES
 IN_ITEMS_VEC k1v1Container;
 SHUFFLE_VEC k2v2Container;
+SHUFFLE_RET_VEC shuffleRetVec;
 pthread_t shuffleThread;
-
 
 vector<pthread_t *> execMapThreads;
 vector<SHUFFLE_VEC> execMapContainers;
@@ -208,5 +210,26 @@ void *shuffle(void *args){
 void Emit3(k3Base *k3Base, v3Base *v3Base) {
 
 }
+
+int shuffleAdd(k2Base *k2, v2Base *v2){
+    bool addPair = true;
+    for(auto it = shuffleRetVec.begin(); it < shuffleRetVec.end() ; it++){
+        SHUFFLE_RET pair = *it;
+        if(!(*k2 < *pair.first) && !(*pair.first < *k2)){
+            pair.second.push_back(v2);
+            *it = pair;
+            addPair = false;
+        }
+    }
+    if(addPair){
+        SHUFFLE_RET addShuff;
+        addShuff.first = k2;
+        vector<v2Base*> addVec;
+        addVec.push_back(v2);
+        addShuff.second = addVec;
+        shuffleRetVec.push_back(addShuff);
+    }
+}
+
 
 // TODO: delete and destroy all the resources that we used.
