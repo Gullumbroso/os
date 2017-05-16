@@ -5,30 +5,22 @@
 #ifndef PROJECT_EXECMAP_H
 #define PROJECT_EXECMAP_H
 
-#include <stdlib.h>
-#include <vector>
-#include <pthread.h>
-#include "MapReduceClient.h"
-
-using namespace std;
-
-typedef pair<k2Base*, v2Base*> SHUFFLE_ITEM;
-typedef vector<SHUFFLE_ITEM> SHUFFLE_VEC;
-typedef pair<k2Base*,vector<v2Base*>> SHUFFLE_RET;
-typedef vector<SHUFFLE_RET> SHUFFLE_RET_VEC;
+#include "Thread.h"
 
 /**
  * @brief A class that represents an ExecMap thread.
  */
-class ExecMapThread {
+class ExecMapThread: public Thread {
 public:
 
-    pthread_t thread;
     SHUFFLE_VEC container;
-    pthread_mutex_t containerMutex;
 
-    ExecMapThread();
+    // if true, deletes all the k2v2Base pointers of the container in the destructor. Depends on
+    // the autoDeleteV2K2 boolean variable supplied by the user.
+    bool deleteElements;
 
+
+    ExecMapThread(bool autoDeleteV2K2);
     ~ExecMapThread();
 };
 

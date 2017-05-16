@@ -4,12 +4,22 @@
 
 #include "ExecMapThread.h"
 
-ExecMapThread::ExecMapThread() {
-    containerMutex = PTHREAD_MUTEX_INITIALIZER;
+ExecMapThread::ExecMapThread(bool autoDeleteV2K2)
+{
+    deleteElements = autoDeleteV2K2;
 }
 
-ExecMapThread::~ExecMapThread() {
-    pthread_mutex_destroy(&containerMutex);
+ExecMapThread::~ExecMapThread()
+{
+    if (deleteElements)
+    {
+        for (auto it = container.begin(); it < container.end(); it++)
+        {
+            SHUFFLE_ITEM item = *it;
+            delete item.first;
+            delete item.second;
+        }
+    }
 }
 
 
