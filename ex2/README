@@ -1,49 +1,91 @@
 avishadler,gullumbroso
 Avishay Adler 203538657, Gilad Lumbroso 204781694
-EX: 2
+EX: 3
 
 FILES:
-README -            that file
-uthreads.cpp -      the library
-Thread.h -          header of the thread class
-Thread.cpp -        the thread class
+README -                 that file
+ExecMapThread.cpp -      ExecMap thread class
+ExecMapThread.h  -       header file of ExecMap thread class
+ExecReduceThread.cpp -   ExecReduceThread thread class
+ExecReduceThread.h -     ExecReduceThread header of the class
+MapReduceClient.h -      the supplied header file for the MapReduceClient module
+MapReduceFramework.cpp - the supplied MapReduceFramework module
+MapReduceFramework.h -   the supplied header file for the MapReduceFramework module
+Search.cpp -             specific implementation of Map and Reduce functions.
+Thread.cpp -             represents a Thread.
+Thread.h -               thread header file.
 Makefile
 
 REMARKS:
 
-    (▰˘◡˘▰)  THANK  (✿◠‿◠)  YOU ｡◕ ‿ ◕｡ !
+    ̿̿ ̿̿ ̿̿ ̿'̿'\̵͇̿̿\з= ( ▀ ͜͞ʖ▀) =ε/̵͇̿̿/’̿’̿ ̿ ̿̿ ̿̿ ̿̿
 
 ANSWERS:
 
-    Q1: one usage of user-level threads is when the user wants to preform 2 different tasks,
-    and the problem is that one must sync with the another ,
-    the user can use user-level threads and control the running order-
-    the user should open some threads and for the sync part make a thread
-    and use uthreads_sync to sync it with the other thread.
-    since the operating system does the sync process, in Kernel-Level threads the user can't do it.
+    Q1:
 
-
-    Q2:  Advantages: 1. If a process crushes, the other processes can still run,
-    while if this is one process with number of threads, all the threads crush if the process crushes.
-    2. it is more safe if every process has its own memory.
-
-    Disadvantages:
-    1. the Switching process between processes has more overhead
-    2. sharing memory cost using some system calls since every process has to have its own memory.
-
+    Q2:
 
     Q3:
-    The KB sends interrupt (user typing) to the operating system and it care about it and updates the Shell.
-    The Shell shows the text that the user writes. when the user presses the Enter button
-    it sends a system call to the operating system.
-    The operating system sends SIGKILL for terminating the application.
+    A. Utilizing multi-cores
+    B. The ability to create a sophisticated scheduler, based on internal data.
+    C. Communication time (between different threads/processes)
+    D. Ability to progress while a certain thread/process is blocked (e.g. is waiting for disk)
+    E. Overall speed
+
+    MARKS:
+    V- means yes
+    X - means no
+    faster - 1...2...3...4 - slowest. (for section E.)
+
+           ___________________________________________________________________________________
+    Sect.  | A. |   B.   |       C.         |   D. |                  E.                      |
+           ------------------------------------------------------------------------------------
+    Nira   | X  |   X    |       X          |   X  |  4. Most slow.                           |
+           ------------------------------------------------------------------------------------
+    Moti   | V  |   X    |    time is fast  |   V  |  2. faster than one thread.              |
+           ------------------------------------------------------------------------------------
+    Danny  | X  |   V    |    very fast     |   X  |  1. fastest, using  user-level threads.  |
+           ------------------------------------------------------------------------------------
+           |    |        |                  |      |  3. context switching between processes  |
+    Galit  | V  |   X    |       slow       |   V  |     is slow, but faster than operating   |
+           |    |        |                  |      |     only on one thread .                 |
+           ------------------------------------------------------------------------------------
+
 
     Q4:
-    "Virtual time" is the running time of the process code only.
-    The "Real time" combined from the 'Virtual time' and the time that takes for OS operations
-    that are not part of the process to run. - the real time that takes to execute the program.
+                | Kernel |   User  | Process |
+                ------------------------------
+    a. Stack    |   X    |    X    |   X     |
+                ------------------------------
+    b. Heap     |   V    |    V    |   X     |
+                ------------------------------
+    c. Global   |   V    |    V    |   X     |
+                ------------------------------
 
-    Examples:
-    Virtual time - for the OS - switch between threads
-    Real time - for the user - include all it's overhead, for knowing how much time
-    it takes to run a program (complexity).
+    Q5:
+
+    Deadlock -  is a state in which each member of a group of actions,
+                is waiting for some other member to release a loc.
+
+
+    Livelock -  is similar to a deadlock, except that the states of the processes
+                involved in the livelock constantly change with regard to one another,
+                none progressing. each process is waiting “actively”, trying to resolve
+                the problem on its own
+
+
+    Deadlock example -
+                Two different threads attempts to transfer money between
+                the two same accounts at the same time.
+                Thread1 wants to transfer 10 Nis from foo account to bar account.
+                Almost at the same time, Thread2 wants to tranfer 10 Nis from the bar
+                account to the foo account. The two threads will wait infinitely one
+                after the other.
+
+
+    Livelock example-
+          A criminal kidnaps a hostage and he asks for ransom in order to release the hostage.
+          A police agrees to give the criminal the money he wants once the hostage is released.
+          The criminal releases the hostage only when he gets the money.
+          Both are waiting for each other to act first, hence livelock. :)
