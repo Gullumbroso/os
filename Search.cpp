@@ -23,8 +23,8 @@ using namespace std;
 string search_str;
 vector<string> paths;
 vector<string> searchInPath(string path_to_check, string key_word);
-IN_ITEMS_VEC k1v1Container;
-OUT_ITEMS_VEC k3v3Container;
+IN_ITEMS_VEC inputItems;
+OUT_ITEMS_VEC outputItems;
 
 
 /**
@@ -67,20 +67,42 @@ public:
 /**
  * @brief Implements the k2Base and the k3Base classes
  */
-class FileNameKey : public k2Base, public k3Base
+class FileNameKey2 : public k2Base
 {
 
 public:
     string fileName;
 
-    FileNameKey(string fn)
+    FileNameKey2(string fn)
     {
         fileName = fn;
     }
 
     bool operator<(const k2Base &other) const override
     {
-        const FileNameKey &otherFileName = (const FileNameKey &) other;
+        const FileNameKey2 &otherFileName = (const FileNameKey2 &) other;
+        return this->fileName < otherFileName.fileName;
+    }
+};
+
+
+/**
+ * @brief Implements the k2Base and the k3Base classes
+ */
+class FileNameKey3 : public k3Base
+{
+
+public:
+    string fileName;
+
+    FileNameKey3(string fn)
+    {
+        fileName = fn;
+    }
+
+    bool operator<(const k3Base &other) const override
+    {
+        const FileNameKey3 &otherFileName = (const FileNameKey3 &) other;
         return this->fileName < otherFileName.fileName;
     }
 };
@@ -132,7 +154,8 @@ class MapReduce : public MapReduceBase
         vector<string> res = searchInPath(dirName->dirName, word->searchTerm);
         for (auto it = res.begin(); it < res.end(); it++)
         {
-            FileNameKey *file = new FileNameKey(*it);
+            string fileName = *it;
+            FileNameKey2 *file = new FileNameKey2(fileName);
             Emit2(file, new SingleCountValue());
         }
     }
@@ -140,10 +163,12 @@ class MapReduce : public MapReduceBase
 
     void Reduce(const k2Base *const key, const V2_VEC &vals) const override
     {
-        FileNameKey *const fileName = (FileNameKey *const) key;
+        FileNameKey2 *const fileName = (FileNameKey2 *const) key;
+        string fn = fileName->fileName;
+        FileNameKey3 *const fileNameKey3 = new FileNameKey3(fn);
         FileCountValue *const count = new FileCountValue((int) vals.size());
-        k3v3Container.push_back(pair(fileName, count));
-        Emit3(fileName, count);
+        outputItems.push_back(pair<FileNameKey3 *, FileCountValue *> {fileNameKey3, count});
+        Emit3(fileNameKey3, count);
     }
 };
 
@@ -153,14 +178,14 @@ class MapReduce : public MapReduceBase
  */
 void releaseResources()
 {
-    for (auto it = k1v1Container.begin(); it < k1v1Container.end(); it++)
+    for (auto it = inputItems.begin(); it < inputItems.end(); it++)
     {
         auto pair = *it;
         delete pair.first;
         delete pair.second;
     }
 
-    for (auto it = k3v3Container.begin(); it < k3v3Container.end(); it++)
+    for (auto it = outputItems.begin(); it < outputItems.end(); it++)
     {
         auto pair = *it;
         delete pair.first;
@@ -173,7 +198,7 @@ void releaseResources()
  * @brief Prints an error message to the standard error with the name of the failing function.
  * @param failingFunc The name of the failing function.
  */
-void exitWithError(string message)
+void abort(string message)
 {
     cerr << message << endl;
     releaseResources();
@@ -213,11 +238,30 @@ vector<string> searchInPath(string path_to_check, string key_word)
 }
 
 
+/**
+ * @brief Prints the final output.
+ * @param finalOutput The final output.
+ */
+void printResults(OUT_ITEMS_VEC finalOutput)
+{
+    for (auto it = finalOutput.begin(); it < finalOutput.end(); it++)
+    {
+        OUT_ITEM pair = *it;
+        FileNameKey3 *fileNameKey3 = (FileNameKey3 *)pair.first;
+        FileCountValue *countValue = (FileCountValue *)pair.second;
+        for (int i = 0; i < countValue->count; i++)
+        {
+            cout << fileNameKey3->fileName;
+        }
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        exitWithError("Wrong number of arguments.");
+        abort("Wrong number of arguments.");
     }
     else
     {
@@ -228,17 +272,21 @@ int main(int argc, char *argv[])
     // prepare the IN_ITEMS_VEC for the runMapReduceFramework function
     for (auto it = paths.begin(); it < paths.end(); it++)
     {
-        k1v1Container.push_back(pair(*it, search_str));
+        string path = *it;
+        k1Base *k1 = new DirNameKey(path);
+        v1Base *v1 = new SearchTermValue(search_str);
+        pair<k1Base*, v1Base*> pair1 = {k1, v1};
+        inputItems.push_back(pair1);
     }
 
     MapReduce mapReduce;
 
-    OUT_ITEMS_VEC finalOutput = RunMapReduceFramework(mapReduce, k1v1Container, MULTI_THERAD_LEVEL,
+    OUT_ITEMS_VEC finalOutput = RunMapReduceFramework(mapReduce, inputItems, MULTI_THERAD_LEVEL,
                                                       true);
 
-    releaseResources();
+    printResults(finalOutput);
 
-    // TODO: Print final output?
+    releaseResources();
 
     return SUCCESS;
 }

@@ -11,6 +11,8 @@
 #include <iomanip>
 #include <ctime>
 #include <sstream>
+#include <algorithm>
+#include <sys/time.h>
 #include "MapReduceFramework.h"
 #include "ExecMapThread.h"
 #include "ExecReduceThread.h"
@@ -21,7 +23,7 @@ using namespace std;
 #define SUCCESS 0
 #define FAILURE 1
 #define CHUNK_SIZE 10
-#define LOG_FILE_NAME ".MapReduceFramework.log"
+#define LOG_FILE_NAME "/cs/usr/gullumbroso/Desktop/OS/ex2/project/MapReduceFramework.log"
 #define MAP_THREAD_NAME "ExecMap"
 #define SHUFFLE_THREAD_NAME "Shuffle"
 #define REDUCE_THREAD_NAME "ExecReduce"
@@ -51,6 +53,8 @@ bool autoDelete;
 
 map<pthread_t, Thread *> pthreadToThreadObject;
 
+struct timeval startTimer, endTimer;
+
 
 // MUTEXES
 
@@ -73,6 +77,12 @@ void shuffleAdd(k2Base *k2, v2Base *v2);
 void printToLog(string content);
 
 void releaseResources(bool autoDeleteV2K2);
+
+void *shuffleFunc(void *args);
+
+void *execMapFunc(void *mrb);
+
+void *execReduceFunc(void *mrb);
 
 
 /**
@@ -102,9 +112,11 @@ string getCurrentTime()
 /**
  * @return The elapsed time since and.
  */
-string getElapsedTime()
+double getElapsedTime()
 {
-
+    double time = (endTimer.tv_sec * 1000000 + endTimer.tv_usec) -
+            (startTimer.tv_sec * 1000000 + startTimer.tv_usec);
+    return time * 1000;
 }
 
 
@@ -124,7 +136,15 @@ void init()
 
     sem_init(&shuffleSem, 0, 0);
 
-    // Create the shuffleFunc thread
+    logFile.open(LOG_FILE_NAME);
+}
+
+
+/**
+ * @brief Creates the shuffle thread.
+ */
+void createShuffleThread()
+{
     int res = pthread_create(&shuffleThread, NULL, shuffleFunc, &k2v2Container);
     if (res < 0)
     {
@@ -137,8 +157,6 @@ void init()
                       + string(getCurrentTime())
                       + "]";
     printToLog(printStr);
-
-    logFile.open(LOG_FILE_NAME);
 }
 
 
@@ -147,21 +165,26 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
                       bool autoDeleteV2K2)
 {
     autoDelete = autoDeleteV2K2;
+    k1v1Container = itemsVec;
+
+    init();
 
     printToLog("RunMapReduceFramework started with " + string(to_string(multiThreadLevel)) + " "
             "threads");
 
-    init();
-
-    k1v1Container = itemsVec;
+    createShuffleThread();
 
     // Prepare and run the ExecMap threads and the Shuffle thread
+    gettimeofday(&startTimer, NULL);
     mappingPhase(mapReduce, multiThreadLevel);
+    gettimeofday(&endTimer, NULL);
+    printToLog("Map and Shuffle took " + string(to_string(getElapsedTime())) + "ns");
 
     // By now the shuffle phase is finished - it's time to move on to the reduce phase
-    // TODO: Add the measured time prints.
-    printToLog("Map and Shuffle took " + string(getElapsedTime()) + "ns");
+    gettimeofday(&startTimer, NULL);
     reducingPhase(mapReduce, multiThreadLevel);
+    gettimeofday(&endTimer, NULL);
+    printToLog("Reduce took " + string(to_string(getElapsedTime())) + "ns");
 
     // Merge the contents of the reduce containers into the final output container
     for (auto it = execReduceThreads.begin(); it < execReduceThreads.end(); it++)
@@ -173,7 +196,7 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
 
     sort(finalOutput.begin(), finalOutput.end());
 
-    printToLog("RunMapReduceFramework finished");
+    printToLog("RunMapReduceFramework finished :)))");
 
     releaseResources(autoDelete);
 
@@ -205,7 +228,9 @@ void mappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
         exitWithError("pthread_mutex_lock");
     }
 
-    while (numOfThreadsCount < k1v1Container.size() && (int) execMapThreads.size < multiThreadLevel)
+    while (((int) execMapThreads.size() < multiThreadLevel)
+//           && (numOfThreadsCount < (int) k1v1Container.size())
+           )
     {
         ExecMapThread *t = new ExecMapThread(autoDelete);
         if (t == nullptr)
@@ -280,7 +305,7 @@ void *execMapFunc(void *mrb)
             break;
         }
 
-        int chunkSize = (int) min(containerSize - k1v1Index, CHUNK_SIZE);
+        int chunkSize = (int) min((int) (containerSize - k1v1Index), (int) CHUNK_SIZE);
         k1v1Index += chunkSize;
 
         pthread_mutex_unlock(&k1v1_mutex);
@@ -327,7 +352,7 @@ void *execMapFunc(void *mrb)
  * @param k2Base A pointer to the k2base.
  * @param v2Base A pointer to the v2base.
  */
-void Emit2(k2Base *k2Base, v2Base *v2Base)
+void Emit2(k2Base *k2, v2Base *v2)
 {
     pthread_t threadID = pthread_self();
     ExecMapThread *t = (ExecMapThread *) pthreadToThreadObject.at(threadID);
@@ -340,7 +365,7 @@ void Emit2(k2Base *k2Base, v2Base *v2Base)
         exitWithError("pthread_mutex_lock");
     }
 
-    container->push_back(pair(k2Base, v2Base));
+    container->push_back(make_pair(k2, v2));
 
     res = pthread_mutex_unlock(&(t->containerMutex));
     if (res < 0)
@@ -456,8 +481,9 @@ void reducingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
         exitWithError("pthread_mutex_lock");
     }
 
-    while (numOfThreadsCount < shuffleRetVec.size() &&
-           (int) execReduceThreads.size < multiThreadLevel)
+    while ((int) execReduceThreads.size() < multiThreadLevel
+//           && numOfThreadsCount < shuffleRetVec.size()
+           )
     {
         ExecReduceThread *t = new ExecReduceThread();
         if (t == nullptr)
@@ -531,7 +557,7 @@ void *execReduceFunc(void *mrb)
             break;
         }
 
-        int chunkSize = (int) min(containerSize - shuffleIndex, CHUNK_SIZE);
+        int chunkSize = (int) min((int) (containerSize - shuffleIndex), (int) CHUNK_SIZE);
         shuffleIndex += chunkSize;
 
         pthread_mutex_unlock(&shuffle_mutex);
@@ -558,7 +584,7 @@ void *execReduceFunc(void *mrb)
  * @param k3Base A pointer to the k3base.
  * @param v3Base A pointer to the v3base.
  */
-void Emit3(k3Base *k3Base, v3Base *v3Base)
+void Emit3(k3Base *k3, v3Base *v3)
 {
     pthread_t threadID = pthread_self();
     ExecReduceThread *t = (ExecReduceThread *) pthreadToThreadObject.at(threadID);
@@ -571,7 +597,7 @@ void Emit3(k3Base *k3Base, v3Base *v3Base)
         exitWithError("pthread_mutex_lock");
     }
 
-    container->push_back(pair(k3Base, v3Base));
+    container->push_back(make_pair(k3, v3));
 
     res = pthread_mutex_unlock(&(t->containerMutex));
     if (res < 0)
