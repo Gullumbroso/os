@@ -45,7 +45,8 @@ sem_t shuffleSem;
 
 ofstream logFile;
 
-int k1v1Index;
+int k1v1Index; // The index that indicates which element is the last that was taken care of
+int k1v1LocalIndex; // The index that indicates which element to deal with in the current iteration
 int shuffleIndex;
 int unfinishedThreadsCounter;
 
@@ -126,6 +127,7 @@ double getElapsedTime()
 void init()
 {
     k1v1Index = 0;
+    k1v1LocalIndex = 0;
     shuffleIndex = 0;
     unfinishedThreadsCounter = 0;
 
@@ -311,7 +313,7 @@ void *execMapFunc(void *mrb)
         pthread_mutex_unlock(&k1v1_mutex);
 
         // Take a batch from the container
-        vector<IN_ITEM>::const_iterator first = k1v1Container.begin() + k1v1Index;
+        vector<IN_ITEM>::const_iterator first = k1v1Container.begin() + k1v1LocalIndex;
         vector<IN_ITEM>::const_iterator last = k1v1Container.begin() + chunkSize;
         vector<IN_ITEM> chunk(first, last);
 
@@ -321,6 +323,8 @@ void *execMapFunc(void *mrb)
             IN_ITEM pair = *it;
             mapReduceBase->Map(pair.first, pair.second);
         }
+
+        k1v1LocalIndex = k1v1Index;
     }
 
     // Decrement the unfinishedThreads counter

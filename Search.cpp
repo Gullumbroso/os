@@ -148,6 +148,7 @@ class MapReduce : public MapReduceBase
 
     void Map(const k1Base *const key, const v1Base *const val) const override
     {
+        cout << "In the Map function!" << endl;
         DirNameKey *const dirName = (DirNameKey *const) key;
         SearchTermValue *const word = (SearchTermValue *const) val;
 
