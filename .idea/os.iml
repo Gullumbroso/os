@@ -4,15 +4,10 @@
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/MapReduceFramework.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ExecReduceThread.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/MapReduceClient.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/ExecMapThread.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/MapReduceFramework.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/Thread.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/ExecMapThread.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/ExecReduceThread.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Thread.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Search.cpp" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">
