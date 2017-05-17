@@ -60,6 +60,7 @@ struct timeval startTimer, endTimer;
 
 pthread_mutex_t k1v1_mutex;
 pthread_mutex_t unfinishedThreads_mutex;
+pthread_mutex_t shuffleCreate_mutex;
 pthread_mutex_t shuffle_mutex;
 pthread_mutex_t pthreadToContainer_mutex;
 pthread_mutex_t shuffleFinished_mutex;
@@ -139,8 +140,11 @@ void init()
 
     k1v1_mutex = PTHREAD_MUTEX_INITIALIZER;
     shuffle_mutex = PTHREAD_MUTEX_INITIALIZER;
+    shuffleCreate_mutex = PTHREAD_MUTEX_INITIALIZER;
     pthreadToContainer_mutex = PTHREAD_MUTEX_INITIALIZER;
     unfinishedThreads_mutex = PTHREAD_MUTEX_INITIALIZER;
+    shuffleFinished_mutex = PTHREAD_MUTEX_INITIALIZER;
+    logFile_mutex = PTHREAD_MUTEX_INITIALIZER;
 
     sem_init(&shuffleSem, 0, 0);
 
@@ -153,7 +157,13 @@ void init()
  */
 void createShuffleThread()
 {
-    int res = pthread_create(&shuffleThread, NULL, shuffleFunc, &k2v2Container);
+    int res = pthread_mutex_lock(&shuffleCreate_mutex);
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_lock");
+    }
+
+    res = pthread_create(&shuffleThread, NULL, shuffleFunc, &k2v2Container);
     if (res < 0)
     {
         exitWithError("pthread_create");
@@ -182,6 +192,18 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
             "threads");
 
     createShuffleThread();
+
+    // Block the main thread until the shuffle is created
+    int res = pthread_mutex_lock(&shuffleCreate_mutex);
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_lock");
+    }
+    res = pthread_mutex_unlock(&shuffleCreate_mutex);
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_unlock");
+    }
 
     // Prepare and run the ExecMap threads and the Shuffle thread
     gettimeofday(&startTimer, NULL);
@@ -301,11 +323,16 @@ void *execMapFunc(void *mrb)
 
     while (k1v1Index < containerSize)
     {
+        safePrint("Got into the while loop of the execMapFunc with id: " +
+        string(to_string((pthread_self()))));
+
         res = pthread_mutex_lock(&k1v1_mutex);
         if (res < 0)
         {
             exitWithError("pthread_mutex_lock");
         }
+
+        safePrint("execMapFunc with id: " + string(to_string((pthread_self()))) + " is free :)");
 
         // Check if the k1v1Index value hasn't been modified since the entrance to the loop
         if (k1v1Index >= containerSize)
@@ -314,6 +341,7 @@ void *execMapFunc(void *mrb)
         }
 
         int chunkSize = (int) min((int) (containerSize - k1v1Index), (int) CHUNK_SIZE);
+        safePrint("chunkSize is: " + string(to_string(chunkSize)));
         int k1v1LocalIndex = k1v1Index;
         k1v1Index += chunkSize;
 
@@ -343,10 +371,18 @@ void *execMapFunc(void *mrb)
         exitWithError("pthread_mutex_lock");
     }
     unfinishedThreadsCounter--;
+    safePrint("Thread num " + string(to_string(pthread_self())) + " is finished");
     res = pthread_mutex_unlock(&unfinishedThreads_mutex);
     if (res < 0)
     {
         exitWithError("pthread_mutex_unlock");
+    }
+
+    // Just in case - increment the semaphore
+    res = sem_post(&shuffleSem);
+    if (res < 0)
+    {
+        exitWithError("sem_post");
     }
 
     // Print to the log file
@@ -367,7 +403,7 @@ void *execMapFunc(void *mrb)
  */
 void Emit2(k2Base *k2, v2Base *v2)
 {
-    safePrint("Entered Emit2");
+    safePrint("Thread num. " + string(to_string(pthread_self())) + " got into Emit2");
 
     pthread_t threadID = pthread_self();
 
@@ -390,15 +426,10 @@ void Emit2(k2Base *k2, v2Base *v2)
     }
 
     res = sem_post(&shuffleSem);
-    safePrint("Finished Emit2");
-
-
     if (res < 0)
     {
         exitWithError("sem_post");
     }
-
-    safePrint("Finished Emit2");
 }
 
 /**
@@ -407,13 +438,42 @@ void Emit2(k2Base *k2, v2Base *v2)
  */
 void *shuffleFunc(void *args)
 {
-    while (unfinishedThreadsCounter > 0)
+    // Unlock the mutex that blocks that main thread from creating the ExecMap threads
+    int res = pthread_mutex_unlock(&shuffleCreate_mutex);
+    if (res < 0)
     {
+        exitWithError("pthread_mutex_unlock");
+    }
+
+    int semValue;
+    res = sem_getvalue(&shuffleSem, &semValue);
+    if (res < 0)
+    {
+        exitWithError("sem_getvalue");
+    }
+
+//    res = sem_post(&shuffleSem);
+//    if (res < 0)
+//    {
+//        exitWithError("sem_post");
+//    }
+
+    while (unfinishedThreadsCounter > 0 || semValue > 0)
+    {
+        safePrint("Shuffle unfinishedThreadCounter is: " + string(to_string(unfinishedThreadsCounter)));
+
         // Wait for new <k2,v2> pairs to deal with
-        int res = sem_wait(&shuffleSem);
+
+        safePrint("Wait!");
+        res = sem_wait(&shuffleSem);
         if (res < 0)
         {
             exitWithError("sem_wait");
+        }
+        res = sem_getvalue(&shuffleSem, &semValue);
+        if (res < 0)
+        {
+            exitWithError("sem_getvalue");
         }
 
         for (auto it = execMapThreads.begin(); it < execMapThreads.end(); it++)
@@ -429,12 +489,8 @@ void *shuffleFunc(void *args)
                     exitWithError("pthread_mutex_lock");
                 }
 
-                // If there are more than CHUNK_SIZE elements in the container, take only
-                // CHUNK_SIZE because otherwise the semaphore will be out of sync.
-                if (container->size() > 10)
-                {
+                safePrint("Shuffle took a pair");
 
-                }
                 pair = container->back();
                 container->pop_back();
 
@@ -445,12 +501,14 @@ void *shuffleFunc(void *args)
                 }
 
                 shuffleAdd(pair.first, pair.second);
+
+                break;
             }
         }
     }
 
     // Unlock the shuffleFinished mutex so the main thread could move on to the reduce phase
-    int res = pthread_mutex_unlock(&shuffleFinished_mutex);
+    res = pthread_mutex_unlock(&shuffleFinished_mutex);
     if (res < 0)
     {
         exitWithError("pthread_mutex_unlock");
@@ -476,6 +534,7 @@ void shuffleAdd(k2Base *k2, v2Base *v2)
             pair.second.push_back(v2);
             *it = pair;
             addPair =  false;
+            break;
         }
     }
     if (addPair)

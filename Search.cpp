@@ -155,8 +155,6 @@ class MapReduce : public MapReduceBase
 
     void Map(const k1Base *const key, const v1Base *const val) const override
     {
-        safePrintUser("In Map func " + string(to_string(pthread_self())));
-
         DirNameKey *const dirName = (DirNameKey *const) key;
         SearchTermValue *const word = (SearchTermValue *const) val;
 
@@ -164,8 +162,6 @@ class MapReduce : public MapReduceBase
 
         for (auto it = res.begin(); it < res.end(); it++)
         {
-            safePrintUser("In the for loop of the Map func " + string(to_string(pthread_self())));
-
             string fileName = *it;
             FileNameKey2 *file = new FileNameKey2(fileName);
             Emit2(file, new SingleCountValue());
@@ -264,7 +260,7 @@ void printResults(OUT_ITEMS_VEC finalOutput)
         FileCountValue *countValue = (FileCountValue *)pair.second;
         for (int i = 0; i < countValue->count; i++)
         {
-            cout << fileNameKey3->fileName;
+            cout<< fileNameKey3->fileName <<" ";
         }
     }
 }
