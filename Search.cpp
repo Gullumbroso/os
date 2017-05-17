@@ -26,6 +26,13 @@ vector<string> searchInPath(string path_to_check, string key_word);
 IN_ITEMS_VEC inputItems;
 OUT_ITEMS_VEC outputItems;
 
+pthread_mutex_t printMutexUser = PTHREAD_MUTEX_INITIALIZER;
+void safePrintUser(string msg) {
+    pthread_mutex_lock(&printMutexUser);
+    cout << msg << endl;
+    pthread_mutex_unlock(&printMutexUser);
+}
+
 
 /**
  * @brief Implements the k1Base class
@@ -148,13 +155,19 @@ class MapReduce : public MapReduceBase
 
     void Map(const k1Base *const key, const v1Base *const val) const override
     {
-        cout << "In the Map function!" << endl;
+        safePrintUser("In Map func " + string(to_string(pthread_self())));
+
         DirNameKey *const dirName = (DirNameKey *const) key;
         SearchTermValue *const word = (SearchTermValue *const) val;
 
         vector<string> res = searchInPath(dirName->dirName, word->searchTerm);
+
+        safePrintUser("In the Map func, the size of res is: " + to_string(res.size()));
+
         for (auto it = res.begin(); it < res.end(); it++)
         {
+            safePrintUser("In the for loop of the Map func " + string(to_string(pthread_self())));
+
             string fileName = *it;
             FileNameKey2 *file = new FileNameKey2(fileName);
             Emit2(file, new SingleCountValue());
@@ -215,10 +228,12 @@ void abort(string message)
  */
 vector<string> searchInPath(string path_to_check, string key_word)
 {
+    safePrintUser("In the searchInPathFunc");
+
     vector<string> relevantFiles;
     DIR *dir;
     struct dirent *ent;
-    if ((dir = opendir("/cs/usr/avishadler/Desktop")) != NULL)
+    if ((dir = opendir(path_to_check.c_str())) != NULL)
     {
         /* print all the files and directories within directory */
         while ((ent = readdir(dir)) != NULL)
@@ -235,6 +250,9 @@ vector<string> searchInPath(string path_to_check, string key_word)
     {
         /* could not open directory */
     }
+
+    safePrintUser("At the end of searchInPathFunc");
+
     return relevantFiles;
 }
 

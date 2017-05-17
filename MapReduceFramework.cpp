@@ -86,6 +86,15 @@ void *execMapFunc(void *mrb);
 void *execReduceFunc(void *mrb);
 
 
+// TODO: Delete this method after debugging
+pthread_mutex_t printMutex = PTHREAD_MUTEX_INITIALIZER;
+void safePrint(string msg) {
+    pthread_mutex_lock(&printMutex);
+    cout << msg << endl;
+    pthread_mutex_unlock(&printMutex);
+}
+
+
 /**
  * @brief Prints an error message to the standard error with the name of the failing function.
  * @param failingFunc The name of the failing function.
@@ -129,7 +138,6 @@ void init()
     k1v1Index = 0;
     k1v1LocalIndex = 0;
     shuffleIndex = 0;
-    unfinishedThreadsCounter = 0;
 
     k1v1_mutex = PTHREAD_MUTEX_INITIALIZER;
     shuffle_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -168,6 +176,7 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
 {
     autoDelete = autoDeleteV2K2;
     k1v1Container = itemsVec;
+    unfinishedThreadsCounter = multiThreadLevel;
 
     init();
 
@@ -212,19 +221,20 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
  */
 void mappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
 {
+    // TODO: Delete the num of threads count if we don't use it
     int numOfThreadsCount = 0;
 
-    // Lock the shuffleFinished mutex so the main thread will not continue to the reduce phase
-    // unless the shuffle phase was finished first
-    int res = pthread_mutex_lock(&shuffleFinished_mutex);
-    if (res < 0)
-    {
-        exitWithError("pthread_mutex_lock");
-    }
+//    // Lock the shuffleFinished mutex so the main thread will not continue to the reduce phase
+//    // unless the shuffle phase was finished first
+//    int res = pthread_mutex_lock(&shuffleFinished_mutex);
+//    if (res < 0)
+//    {
+//        exitWithError("pthread_mutex_lock");
+//    }
 
     // Lock the ptheradToContainer_mutex so the ExecMap threads will wait for the
     // initialization of the map
-    res = pthread_mutex_lock(&pthreadToContainer_mutex);
+    int res = pthread_mutex_lock(&pthreadToContainer_mutex);
     if (res < 0)
     {
         exitWithError("pthread_mutex_lock");
@@ -245,8 +255,6 @@ void mappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
         {
             exitWithError("pthread_create");
         }
-
-        unfinishedThreadsCounter++;
 
         // Print to the log file
         string printStr = "Thread "
@@ -294,7 +302,6 @@ void *execMapFunc(void *mrb)
 
     while (k1v1Index < containerSize)
     {
-
         res = pthread_mutex_lock(&k1v1_mutex);
         if (res < 0)
         {
@@ -359,6 +366,9 @@ void *execMapFunc(void *mrb)
 void Emit2(k2Base *k2, v2Base *v2)
 {
     pthread_t threadID = pthread_self();
+
+    safePrint("In the Emit2 func, thread " + string(to_string(threadID)));
+
     ExecMapThread *t = (ExecMapThread *) pthreadToThreadObject.at(threadID);
     SHUFFLE_VEC *container = &(t->container);
 
@@ -391,6 +401,9 @@ void Emit2(k2Base *k2, v2Base *v2)
  */
 void *shuffleFunc(void *args)
 {
+    safePrint("In the shuffle func with unfinishedThreadsCounter of " +
+                      string(to_string(unfinishedThreadsCounter)));
+
     while (unfinishedThreadsCounter > 0)
     {
         // Wait for new <k2,v2> pairs to deal with
@@ -427,13 +440,13 @@ void *shuffleFunc(void *args)
         }
     }
 
-    // Unlock the shuffleFinished mutex so the main thread could move on to the reduce phase
-    int res = pthread_mutex_unlock(&shuffleFinished_mutex);
-    if (res < 0)
-    {
-        exitWithError("pthread_mutex_unlock");
-    }
-
+//    // Unlock the shuffleFinished mutex so the main thread could move on to the reduce phase
+//    int res = pthread_mutex_unlock(&shuffleFinished_mutex);
+//    if (res < 0)
+//    {
+//        exitWithError("pthread_mutex_unlock");
+//    }
+//
     pthread_exit(NULL);
 }
 
@@ -453,7 +466,7 @@ void shuffleAdd(k2Base *k2, v2Base *v2)
         {
             pair.second.push_back(v2);
             *it = pair;
-            addPair = false;
+            addPair =  false;
         }
     }
     if (addPair)
