@@ -72,7 +72,7 @@ public:
 
 
 /**
- * @brief Implements the k2Base and the k3Base classes
+ * @brief Implements the k2Base class.
  */
 class FileNameKey2 : public k2Base
 {
@@ -94,7 +94,7 @@ public:
 
 
 /**
- * @brief Implements the k2Base and the k3Base classes
+ * @brief Implements the k3Base class
  */
 class FileNameKey3 : public k3Base
 {
@@ -162,8 +162,6 @@ class MapReduce : public MapReduceBase
 
         vector<string> res = searchInPath(dirName->dirName, word->searchTerm);
 
-        safePrintUser("In the Map func, the size of res is: " + to_string(res.size()));
-
         for (auto it = res.begin(); it < res.end(); it++)
         {
             safePrintUser("In the for loop of the Map func " + string(to_string(pthread_self())));
@@ -228,8 +226,6 @@ void abort(string message)
  */
 vector<string> searchInPath(string path_to_check, string key_word)
 {
-    safePrintUser("In the searchInPathFunc");
-
     vector<string> relevantFiles;
     DIR *dir;
     struct dirent *ent;
@@ -248,10 +244,8 @@ vector<string> searchInPath(string path_to_check, string key_word)
     }
     else
     {
-        /* could not open directory */
+        abort("Could not open directory");
     }
-
-    safePrintUser("At the end of searchInPathFunc");
 
     return relevantFiles;
 }

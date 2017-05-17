@@ -46,7 +46,6 @@ sem_t shuffleSem;
 ofstream logFile;
 
 int k1v1Index; // The index that indicates which element is the last that was taken care of
-int k1v1LocalIndex; // The index that indicates which element to deal with in the current iteration
 int shuffleIndex;
 int unfinishedThreadsCounter;
 
@@ -136,7 +135,6 @@ double getElapsedTime()
 void init()
 {
     k1v1Index = 0;
-    k1v1LocalIndex = 0;
     shuffleIndex = 0;
 
     k1v1_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -191,17 +189,26 @@ RunMapReduceFramework(MapReduceBase &mapReduce, IN_ITEMS_VEC &itemsVec, int mult
     gettimeofday(&endTimer, NULL);
     printToLog("Map and Shuffle took " + string(to_string(getElapsedTime())) + "ns");
 
+    // Block the main thread until the shuffle finished its job
+    pthread_join(shuffleThread, NULL);
+
     // By now the shuffle phase is finished - it's time to move on to the reduce phase
     gettimeofday(&startTimer, NULL);
     reducingPhase(mapReduce, multiThreadLevel);
     gettimeofday(&endTimer, NULL);
     printToLog("Reduce took " + string(to_string(getElapsedTime())) + "ns");
 
+    // Block the main thread until all the ExecReduce threads finished their job
+    for (auto it = execReduceThreads.begin(); it < execReduceThreads.end(); it++)
+    {
+        ExecReduceThread *reduceThread = *it;
+        pthread_join(reduceThread->thread, NULL);
+    }
+
     // Merge the contents of the reduce containers into the final output container
     for (auto it = execReduceThreads.begin(); it < execReduceThreads.end(); it++)
     {
         ExecReduceThread *thread = *it;
-        OUT_ITEMS_VEC k3v3Container = thread->container;
         finalOutput.insert(finalOutput.begin(), thread->container.begin(), thread->container.end());
     }
 
@@ -223,14 +230,6 @@ void mappingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
 {
     // TODO: Delete the num of threads count if we don't use it
     int numOfThreadsCount = 0;
-
-//    // Lock the shuffleFinished mutex so the main thread will not continue to the reduce phase
-//    // unless the shuffle phase was finished first
-//    int res = pthread_mutex_lock(&shuffleFinished_mutex);
-//    if (res < 0)
-//    {
-//        exitWithError("pthread_mutex_lock");
-//    }
 
     // Lock the ptheradToContainer_mutex so the ExecMap threads will wait for the
     // initialization of the map
@@ -315,9 +314,14 @@ void *execMapFunc(void *mrb)
         }
 
         int chunkSize = (int) min((int) (containerSize - k1v1Index), (int) CHUNK_SIZE);
+        int k1v1LocalIndex = k1v1Index;
         k1v1Index += chunkSize;
 
-        pthread_mutex_unlock(&k1v1_mutex);
+        res = pthread_mutex_unlock(&k1v1_mutex);
+        if (res < 0)
+        {
+            exitWithError("pthread_mutex_unlock");
+        }
 
         // Take a batch from the container
         vector<IN_ITEM>::const_iterator first = k1v1Container.begin() + k1v1LocalIndex;
@@ -330,8 +334,6 @@ void *execMapFunc(void *mrb)
             IN_ITEM pair = *it;
             mapReduceBase->Map(pair.first, pair.second);
         }
-
-        k1v1LocalIndex = k1v1Index;
     }
 
     // Decrement the unfinishedThreads counter
@@ -365,9 +367,9 @@ void *execMapFunc(void *mrb)
  */
 void Emit2(k2Base *k2, v2Base *v2)
 {
-    pthread_t threadID = pthread_self();
+    safePrint("Entered Emit2");
 
-    safePrint("In the Emit2 func, thread " + string(to_string(threadID)));
+    pthread_t threadID = pthread_self();
 
     ExecMapThread *t = (ExecMapThread *) pthreadToThreadObject.at(threadID);
     SHUFFLE_VEC *container = &(t->container);
@@ -388,11 +390,15 @@ void Emit2(k2Base *k2, v2Base *v2)
     }
 
     res = sem_post(&shuffleSem);
+    safePrint("Finished Emit2");
+
 
     if (res < 0)
     {
         exitWithError("sem_post");
     }
+
+    safePrint("Finished Emit2");
 }
 
 /**
@@ -401,9 +407,6 @@ void Emit2(k2Base *k2, v2Base *v2)
  */
 void *shuffleFunc(void *args)
 {
-    safePrint("In the shuffle func with unfinishedThreadsCounter of " +
-                      string(to_string(unfinishedThreadsCounter)));
-
     while (unfinishedThreadsCounter > 0)
     {
         // Wait for new <k2,v2> pairs to deal with
@@ -426,6 +429,12 @@ void *shuffleFunc(void *args)
                     exitWithError("pthread_mutex_lock");
                 }
 
+                // If there are more than CHUNK_SIZE elements in the container, take only
+                // CHUNK_SIZE because otherwise the semaphore will be out of sync.
+                if (container->size() > 10)
+                {
+
+                }
                 pair = container->back();
                 container->pop_back();
 
@@ -440,13 +449,13 @@ void *shuffleFunc(void *args)
         }
     }
 
-//    // Unlock the shuffleFinished mutex so the main thread could move on to the reduce phase
-//    int res = pthread_mutex_unlock(&shuffleFinished_mutex);
-//    if (res < 0)
-//    {
-//        exitWithError("pthread_mutex_unlock");
-//    }
-//
+    // Unlock the shuffleFinished mutex so the main thread could move on to the reduce phase
+    int res = pthread_mutex_unlock(&shuffleFinished_mutex);
+    if (res < 0)
+    {
+        exitWithError("pthread_mutex_unlock");
+    }
+
     pthread_exit(NULL);
 }
 
@@ -508,7 +517,7 @@ void reducingPhase(MapReduceBase &mapReduceBase, int multiThreadLevel)
             exitWithError("new");
         }
 
-        int res = pthread_create(&(t->thread), NULL, execReduceFunc, &mapReduceBase);
+        res = pthread_create(&(t->thread), NULL, execReduceFunc, &mapReduceBase);
         if (res < 0)
         {
             exitWithError("pthread_create");
@@ -575,12 +584,13 @@ void *execReduceFunc(void *mrb)
         }
 
         int chunkSize = (int) min((int) (containerSize - shuffleIndex), (int) CHUNK_SIZE);
+        int shuffleLocalIndex = shuffleIndex;
         shuffleIndex += chunkSize;
 
         pthread_mutex_unlock(&shuffle_mutex);
 
         // Take a batch from the container
-        vector<SHUFFLE_RET>::const_iterator first = shuffleRetVec.begin() + shuffleIndex;
+        vector<SHUFFLE_RET>::const_iterator first = shuffleRetVec.begin() + shuffleLocalIndex;
         vector<SHUFFLE_RET>::const_iterator last = shuffleRetVec.begin() + chunkSize;
         vector<SHUFFLE_RET> chunk(first, last);
 
