@@ -13,7 +13,7 @@ ExecMapThread::~ExecMapThread()
 {
     if (deleteElements)
     {
-        for (auto it = container.begin(); it < container.end(); it++)
+        for (auto it = containerToDelete.begin(); it != containerToDelete.end(); it++)
         {
             SHUFFLE_ITEM item = *it;
             delete item.first;

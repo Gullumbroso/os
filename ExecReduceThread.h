@@ -17,6 +17,7 @@ class ExecReduceThread: public Thread
 {
 public:
     OUT_ITEMS_VEC container;
+    OUT_ITEMS_VEC containerToDelete;
 
     ExecReduceThread();
     ~ExecReduceThread();

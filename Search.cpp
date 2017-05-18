@@ -260,9 +260,10 @@ void printResults(OUT_ITEMS_VEC finalOutput)
         FileCountValue *countValue = (FileCountValue *)pair.second;
         for (int i = 0; i < countValue->count; i++)
         {
-            cout<< fileNameKey3->fileName <<" ";
+            cout << fileNameKey3->fileName << " ";
         }
     }
+    cout << endl;
 }
 
 

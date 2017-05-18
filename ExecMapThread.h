@@ -14,6 +14,7 @@ class ExecMapThread: public Thread {
 public:
 
     SHUFFLE_VEC container;
+    SHUFFLE_VEC containerToDelete;
 
     // if true, deletes all the k2v2Base pointers of the container in the destructor. Depends on
     // the autoDeleteV2K2 boolean variable supplied by the user.

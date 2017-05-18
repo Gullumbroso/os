@@ -6,7 +6,6 @@
 #define PROJECT_THREAD_H
 
 
-#include "MapReduceFramework.h"
 #include "MapReduceClient.h"
 #include <stdlib.h>
 #include <vector>
