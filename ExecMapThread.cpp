@@ -5,8 +5,8 @@
 #include "ExecMapThread.h"
 
 ExecMapThread::ExecMapThread(bool autoDeleteV2K2)
+:deleteElements(autoDeleteV2K2)
 {
-    deleteElements = autoDeleteV2K2;
 }
 
 ExecMapThread::~ExecMapThread()

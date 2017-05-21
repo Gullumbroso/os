@@ -175,7 +175,8 @@ class MapReduce : public MapReduceBase
         string fn = fileName->fileName;
         FileNameKey3 *const fileNameKey3 = new FileNameKey3(fn);
         FileCountValue *const count = new FileCountValue((int) vals.size());
-        outputItems.push_back(pair<FileNameKey3 *, FileCountValue *> {fileNameKey3, count});
+//        pair<FileNameKey3 *, FileCountValue *> pair1 = {fileNameKey3, count};
+//        outputItems.push_back(pair1);
         Emit3(fileNameKey3, count);
     }
 };
@@ -199,6 +200,9 @@ void releaseResources()
         delete pair.first;
         delete pair.second;
     }
+
+    inputItems.empty();
+    outputItems.empty();
 }
 
 
@@ -267,7 +271,7 @@ void printResults(OUT_ITEMS_VEC finalOutput)
 }
 
 
-int main(int argc, char *argv[])
+int main1(int argc, char *argv[])
 {
     if (argc < 2)
     {
@@ -291,12 +295,18 @@ int main(int argc, char *argv[])
 
     MapReduce mapReduce;
 
-    OUT_ITEMS_VEC finalOutput = RunMapReduceFramework(mapReduce, inputItems, MULTI_THERAD_LEVEL,
+    outputItems = RunMapReduceFramework(mapReduce, inputItems, MULTI_THERAD_LEVEL,
                                                       true);
 
-    printResults(finalOutput);
+    printResults(outputItems);
 
     releaseResources();
 
     return SUCCESS;
+}
+
+int main(int argc, char *argv[]){
+    for (int i = 0 ; i < 10 ; ++i){
+        main1(argc,argv);
+    }
 }
