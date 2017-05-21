@@ -22,7 +22,7 @@ using namespace std;
 #define SUCCESS 0
 #define FAILURE 1
 #define CHUNK_SIZE 10
-#define LOG_FILE_NAME "/cs/usr/gullumbroso/Desktop/OS/ex2/project/MapReduceFramework.log"
+#define LOG_FILE_NAME "/cs/usr/avishadler/Desktop/MapReduceFramework.log"
 #define MAP_THREAD_NAME "ExecMap"
 #define SHUFFLE_THREAD_NAME "Shuffle"
 #define REDUCE_THREAD_NAME "ExecReduce"
