@@ -18,13 +18,76 @@ Makefile
 
 REMARKS:
 
-    ̿̿ ̿̿ ̿̿ ̿'̿'\̵͇̿̿\з= ( ▀ ͜͞ʖ▀) =ε/̵͇̿̿/’̿’̿ ̿ ̿̿ ̿̿ ̿̿
+    ̿̿ ̿̿ ̿̿ ̿'̿'\̵͇̿̿\з= ( ▀ ͜͞ʖ▀) =ε/̵͇̿̿/’̿’̿ ̿ ̿̿ ̿̿
+
+    Search DESIGN:
+
+    Input items:
+    k1 is Directory , represents one directory by string - the directory path.
+    v1 is a Search Value, it represents the word that the framework should search.
+
+    Mid items and output items are the same:
+    k2 and k3 are FileName , a string with its name.
+    v2 and v3 are FileCount object, it represents a number of files with k2 name, it contains an int.
+
+    map function:
+    gets a pointer to Directory goes over the files in the directory:
+    if the file contains the search word, creates new FileName object with the file name and
+    new FileCount object with the number 1. (represents one appearance)
+
+    reduce function:
+    the reduce function gets a key which is FileName object, and a vector of FileCount object,
+    that every one of them holds the number 1
+    the reduce counts the size of this vector - this is the amount of times the filename appeard in
+    all the directories. it return a FileName object and a FileCount object -
+    the file name and the number of times is appears.
+
+    in the and, the search takes this information (the framework already sorted the items according to
+    the key - the file name) and uses it to print each relevant file in the number of times it appears
+    in all the directories given to it.
+̿̿
 
 ANSWERS:
 
     Q1:
+    PSEUDO-CODE:
+    ===================================================================================================
+    We will make this changes in our program:
+    in the MapReduceFramework we will initialize boolean var "threads_end" to false,
+    create the map threads and shuffle thread, join the threads
+    and change threads_end boolean to true.
+
+    In the function Emit2 we will create pair of pointer to k2, pointer to v2 from key and value
+    we will push the pair to the thread's container; pthread_cond_signal - will wake the shuffle thread.
+
+    in the Shuffle:
+    first - pthread_cond_timedwait. while (threads_end != true) do:
+    find the new item to shuffle and add it to the shuffle map.
+    pthread_cond_timedwait shuffles all the items in the container by going over the containers.
+    ===================================================================================================
+
+
+    it can't be solves with pthread_cond_timedwait() because the "TIMEOUT" allows us to check
+    if all the map threads have map_threads_finished and move on and prevent the shuffle
+    thread to get stuck waiting while there is nothing to shuffle.
+
+    This can happen when the shuffle map_threads_finished to shuffle
+    all the items in its list before all the threads have terminated, therefore the
+    threads_finished_flag will be FALSE(!), shuffle thread will enter the while loop and get stuck on the
+    wait process, but there will be no thread to wake it.
 
     Q2:
+    multiThreadLevel = 6 or 6+8n (n is natural number)
+    the num of threads that run simultaneously should be multiple of 8:
+    we have: main thread, shuffle thread, and all the other map and reduce threads.
+    in that way, the max number of threads: 6 + 8n + 2 = 8(n+1)
+    every core will process the same number of threads.
+
+
+    we need to determine n: we should test and measure what is the optimal num of threads to run on a
+    single core.
+    the map and reduce functions can effect this ,if they block themselves - context switches,
+    if not - preemption may not be effective.
 
     Q3:
     A. Utilizing multi-cores
