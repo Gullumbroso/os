@@ -12,6 +12,7 @@
 #include <sstream>
 #include <algorithm>
 #include <sys/time.h>
+#include <unistd.h>
 #include "MapReduceFramework.h"
 #include "ExecMapThread.h"
 #include "ExecReduceThread.h"
@@ -22,7 +23,7 @@ using namespace std;
 #define SUCCESS 0
 #define FAILURE 1
 #define CHUNK_SIZE 10
-#define LOG_FILE_NAME "/cs/usr/avishadler/Desktop/MapReduceFramework.log"
+#define LOG_FILE_NAME "/MapReduceFramework.log"
 #define MAP_THREAD_NAME "ExecMap"
 #define SHUFFLE_THREAD_NAME "Shuffle"
 #define REDUCE_THREAD_NAME "ExecReduce"
@@ -81,15 +82,6 @@ void *shuffleFunc(void *args);
 void *execMapFunc(void *mrb);
 
 void *execReduceFunc(void *mrb);
-
-
-// TODO: Delete this method after debugging
-pthread_mutex_t printMutex = PTHREAD_MUTEX_INITIALIZER;
-void safePrint(string msg) {
-    pthread_mutex_lock(&printMutex);
-    cout << msg << endl;
-    pthread_mutex_unlock(&printMutex);
-}
 
 
 /**
@@ -151,7 +143,11 @@ void init()
 
     sem_init(&shuffleSem, 0, 0);
 
-    logFile.open(LOG_FILE_NAME);
+    char *filePath;
+    getcwd(filePath, 2000);
+    string folder = string(filePath);
+
+    logFile.open(folder + LOG_FILE_NAME);
 }
 
 
@@ -533,7 +529,7 @@ void shuffleAdd(k2Base *k2, v2Base *v2)
     bool addPair = true;
     for (auto it = shuffleRetVec.begin(); it < shuffleRetVec.end(); it++)
     {
-        SHUFFLE_RET pair = *it;
+        f pair = *it;
         if (!(*k2 < *pair.first) && !(*pair.first < *k2))
         {
             pair.second.push_back(v2);

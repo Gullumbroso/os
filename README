@@ -3,17 +3,19 @@ Avishay Adler 203538657, Gilad Lumbroso 204781694
 EX: 3
 
 FILES:
-README -                 that file
-ExecMapThread.cpp -      ExecMap thread class
-ExecMapThread.h  -       header file of ExecMap thread class
-ExecReduceThread.cpp -   ExecReduceThread thread class
-ExecReduceThread.h -     ExecReduceThread header of the class
+README -                 this file
 MapReduceClient.h -      the supplied header file for the MapReduceClient module
-MapReduceFramework.cpp - the supplied MapReduceFramework module
+MapReduceFramework.cpp - the MapReduceFramework module
 MapReduceFramework.h -   the supplied header file for the MapReduceFramework module
-Search.cpp -             specific implementation of Map and Reduce functions.
+Search.cpp -             specific program that utilizes the MapReduce framework
 Thread.cpp -             represents a Thread.
 Thread.h -               thread header file.
+ExecMapThread.cpp -      ExecMap thread class, representing a thread, its mutex and container;
+                         Inherits from Thread
+ExecMapThread.h  -       header file of ExecMap thread class
+ExecReduceThread.cpp -   ExecReduce thread class, representing a thread, its mutex and container;
+                         inherits from Thread
+ExecReduceThread.h -     header file of ExecReduce thread class
 Makefile
 
 REMARKS:
@@ -23,28 +25,29 @@ REMARKS:
     Search DESIGN:
 
     Input items:
-    k1 is Directory , represents one directory by string - the directory path.
-    v1 is a Search Value, it represents the word that the framework should search.
+    k1 is a directory to search within. Represents one directory by string - the directory path.
+    v1 is a search value. Represents the word that the framework should search.
 
-    Mid items and output items are the same:
-    k2 and k3 are FileName , a string with its name.
-    v2 and v3 are FileCount object, it represents a number of files with k2 name, it contains an int.
+    Intermediate items and output items are the same:
+    k2 and k3 are strings that represents the file name;
+    v2 holds the number 1 for the counting of the files;
+    v3 represents the number of files with k2 name.
 
-    map function:
-    gets a pointer to Directory goes over the files in the directory:
-    if the file contains the search word, creates new FileName object with the file name and
-    new FileCount object with the number 1. (represents one appearance)
+    Map function:
+    The map function receives a pointer to a directory and a string, goes over the files in
+    the directory and searches for files that contains that string. if the file contains the
+    search word, creates new FileName object with the file name and new FileCount object with the
+     number 1 (represents one appearance), and emits.
 
-    reduce function:
-    the reduce function gets a key which is FileName object, and a vector of FileCount object,
-    that every one of them holds the number 1
-    the reduce counts the size of this vector - this is the amount of times the filename appeard in
-    all the directories. it return a FileName object and a FileCount object -
-    the file name and the number of times is appears.
+    Reduce function:
+    the reduce function gets a key which is a FileName object, and a vector of FileCount object,
+    which holds multiple instances of the number 1. It then counts the size of this vector -
+    this is the amount of times the filename appears in all the directories. it emits a FileName
+     object and a FileCount object - the file name and the number of times is appears.
 
     in the and, the search takes this information (the framework already sorted the items according to
     the key - the file name) and uses it to print each relevant file in the number of times it appears
-    in all the directories given to it.
+    in all the directories that were received as the initial input.
 ̿̿
 
 ANSWERS:
@@ -67,26 +70,24 @@ ANSWERS:
     ===================================================================================================
 
 
-    it can't be solves with pthread_cond_timedwait() because the "TIMEOUT" allows us to check
+    It can be solved with pthread_cond_timedwait() because the "TIMEOUT" allows us to check
     if all the map threads have map_threads_finished and move on and prevent the shuffle
-    thread to get stuck waiting while there is nothing to shuffle.
-
-    This can happen when the shuffle map_threads_finished to shuffle
-    all the items in its list before all the threads have terminated, therefore the
-    threads_finished_flag will be FALSE(!), shuffle thread will enter the while loop and get stuck on the
-    wait process, but there will be no thread to wake it.
+    thread from getting stuck while waiting when there is nothing to shuffle. This can happen
+    when the shuffle map_threads_finished to shuffle all the items in its list before all the
+    threads have terminated, therefore the threads_finished_flag will be set to false, the shuffle
+    thread will enter the while loop and get stuck, and there will be no thread to wake it.
 
     Q2:
     multiThreadLevel = 6 or 6+8n (n is natural number)
     the num of threads that run simultaneously should be multiple of 8:
     we have: main thread, shuffle thread, and all the other map and reduce threads.
-    in that way, the max number of threads: 6 + 8n + 2 = 8(n+1)
+    in this way, the max number of threads: 6 + 8n + 2 = 8(n+1)
     every core will process the same number of threads.
 
 
     we need to determine n: we should test and measure what is the optimal num of threads to run on a
     single core.
-    the map and reduce functions can effect this ,if they block themselves - context switches,
+    the map and reduce functions can effect this, if they block themselves - context switches,
     if not - preemption may not be effective.
 
     Q3:
@@ -104,15 +105,15 @@ ANSWERS:
            ___________________________________________________________________________________
     Sect.  | A. |   B.   |       C.         |   D. |                  E.                      |
            ------------------------------------------------------------------------------------
-    Nira   | X  |   X    |       X          |   X  |  4. Most slow.                           |
+    Nira   | X  |   X    |       X          |   X  |  4. Slowest                              |
            ------------------------------------------------------------------------------------
-    Moti   | V  |   X    |    time is fast  |   V  |  2. faster than one thread.              |
+    Moti   | V  |   X    |      Fast        |   V  |  2. Fast, but not as user-level threads  |
            ------------------------------------------------------------------------------------
-    Danny  | X  |   V    |    very fast     |   X  |  1. fastest, using  user-level threads.  |
+    Danny  | X  |   V    |    very fast     |   X  |  1. Fastest, using  user-level threads   |
            ------------------------------------------------------------------------------------
-           |    |        |                  |      |  3. context switching between processes  |
-    Galit  | V  |   X    |       slow       |   V  |     is slow, but faster than operating   |
-           |    |        |                  |      |     only on one thread .                 |
+           |    |        |                  |      |  3. Context switching between processes  |
+    Galit  | V  |   X    |      Slow        |   V  |     is slow, but faster than operating   |
+           |    |        |                  |      |     only on one thread                   |
            ------------------------------------------------------------------------------------
 
 
@@ -128,14 +129,14 @@ ANSWERS:
 
     Q5:
 
-    Deadlock -  is a state in which each member of a group of actions,
-                is waiting for some other member to release a loc.
+    Deadlock -  a state in which each member of a group of actions is waiting for some other
+                member to release a loc.
 
 
-    Livelock -  is similar to a deadlock, except that the states of the processes
+    Livelock -  similar to a deadlock, except that the states of the processes
                 involved in the livelock constantly change with regard to one another,
                 none progressing. each process is waiting “actively”, trying to resolve
-                the problem on its own
+                the problem on its own.
 
 
     Deadlock example -
@@ -143,8 +144,7 @@ ANSWERS:
                 the two same accounts at the same time.
                 Thread1 wants to transfer 10 Nis from foo account to bar account.
                 Almost at the same time, Thread2 wants to tranfer 10 Nis from the bar
-                account to the foo account. The two threads will wait infinitely one
-                after the other.
+                account to the foo account. The two threads will wait infinitely to one another.
 
 
     Livelock example-
