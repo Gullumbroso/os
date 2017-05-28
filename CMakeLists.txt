@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.5.2)
-project(project)
+cmake_minimum_required(VERSION 3.6)
+project(untitled1)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread")
-add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-set(SOURCE_FILES MapReduceClient.h MapReduceFramework.h Search.cpp MapReduceFramework.cpp
-        ExecMapThread.cpp ExecMapThread.h ExecReduceThread.cpp ExecReduceThread.h Thread.cpp Thread.h)
-add_executable(project ${SOURCE_FILES})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+set(SOURCE_FILES main.cpp CacheFS.cpp)
+add_executable(untitled1 ${SOURCE_FILES})
