@@ -2,41 +2,55 @@
 // Created by avishadler on 5/28/17.
 //
 
-#include "CacheFS.h";
-#include <string>;
+#include "CacheFS.h"
+#include "File.cpp"
+
+#include <string>
+#include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <map>
+#include <iomanip>
+#include <sstream>
 
 
+#define FAILURE -1
+
+using namespace std;
+cache_algo_t state;
 
 
 /**
  * @brief Prints an error message to the standard error with the name of the failing function.
- * @param failingFunc The name of the failing function.
+ * @param failingMsg The name of the failing function.
  */
-void exitWithError(string failingFunc)
+void exitWithError(string failingMsg)
 {
-    cerr << "MapReduceFramework Failure: " << failingFunc << " failed." << endl;
-    releaseResources(autoDelete);
+    cerr << "CacheFS Failure: " << failingMsg << endl;
     exit(FAILURE);
 }
 
 int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f_new) {
     if (!destroy){
-        return -1;
+        exitWithError("Can not do init if ChacheFS was not destroyed before");
     } else {
         destroy = false;
     }
 
     if(blocks_num <= 0){
-        return -1;
+        exitWithError("invalid number of blocks");
     }
     else if(cache_algo == LRU){
+        state = LRU;
 
     } else if(cache_algo == LFU){
+        state = LFU;
 
     } else if(cache_algo == FBR){
+        state = FBR;
 
     }
-
 
     else{
         return -1;
@@ -48,7 +62,29 @@ int CacheFS_destroy() {
     return 0;
 }
 
+/**
+ File open operation.
+ Receives a path for a file, opens it, and returns an id
+ for accessing the file later
+
+    pathname - the path to the file that will be opened
+
+ Returned value:
+    In case of success:
+		Non negative value represents the id of the file.
+		This may be the file descriptor, or any id number that you wish to create.
+		This id will be used later to read from the file and to close it.
+
+ 	In case of failure:
+		Negative number.
+		A failure will occur if:
+			1. System call or library function fails (e.g. open).
+			2. Invalid pathname. Pay attention that we support only files under
+			   "/tmp" due to the use of NFS in the Aquarium.
+ */
 int CacheFS_open(const char *pathname) {
+    ofstream myfile;
+    myfile.open (pathname);
     return 0;
 }
 
