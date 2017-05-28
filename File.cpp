@@ -10,7 +10,7 @@
  * @param name - the name to set for the file.
  * @return the File.
  */
-File::File(int id, string name) : id(id) , name(name) {
+File::File(int id, string name) : id(id) , path(name) {
     incFrequency();
 }
 
@@ -46,12 +46,12 @@ void File::incFrequency() {
 
 }
 /**
- * overide the == operator. comparison by id.
+ * overide the == operator. comparison by path.
  * @param other - the other File.
  * @return true if the id is equal. false, otherwise.
  */
 bool File::operator==(const File &other) const {
-    return this->id == other.id;
+    return this->path == other.path;
 }
 
 /**
@@ -59,7 +59,7 @@ bool File::operator==(const File &other) const {
  * @return string name of the file.
  */
 string File::getName() {
-    return this->name;
+    return this->path;
 }
 
 

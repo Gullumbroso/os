@@ -4,6 +4,7 @@
 
 #include "CacheFS.h"
 #include "File.cpp"
+#include "CacheBlock.h"
 
 #include <string>
 #include <stdlib.h>
@@ -18,6 +19,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <math.h>
+#include <syslimits.h>
+#include <limits.h>
+#include <stdio.h>
+
+
 
 
 #define FAILURE -1
@@ -28,7 +35,7 @@ struct stat fi;
 size_t blksize;
 
 
-
+map<string, vector<CacheBlock>> cache;
 map<int, File> filesMap;
 
 /**
@@ -97,6 +104,11 @@ int CacheFS_destroy() {
 			   "/tmp" due to the use of NFS in the Aquarium.
  */
 int CacheFS_open(const char *pathname) {
+    char *fullPath;
+    char *res = realpath(pathname, fullPath);
+    if(!res){
+        exitWithError("can not get full path");
+    }
     int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
     if (fd<0){
         exitWithError("open file is not valid.");
@@ -104,8 +116,10 @@ int CacheFS_open(const char *pathname) {
     auto it = filesMap.find(fd);
     if (it == filesMap.end())
     {
-        File file = File(fd, pathname);
+        File file = File(fd, fullPath);
         filesMap[fd] = file;
+        CacheBlock cacheBlock = CacheBlock(fullPath,0,)
+        cache[fullPath] =
     }
     return 0;
 }
@@ -116,19 +130,22 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset){
     {
         exitWithError("trying to read a file that is not open.");
     }
-    off_t where = lseek(file_id, offset,SEEK_SET);
+
+    size_t counter = blksize;
+    int b_read = 0;
+    int start = (int) floor(offset/blksize);
+    int end = (int) floor((offset+count)/blksize);
+    int numOfIter = end-start;
+    off_t where = lseek(file_id, start,SEEK_SET);
     if(where<0){
         exitWithError("can't read from file.");
     }
-    size_t counter = blksize;
-    int b_read = 0;
-    while (counter < count){
-        b_read += (int) read(file_id, buf, blksize);
-        counter += blksize;
+    for(int i = 0; i<numOfIter ; i++){
+        if()
+        b_read += (int) read(file_id,buf, blksize);
+
     }
 
-
-    b_read = (int) read(file_id, buf, count);
     return b_read;
 }
 

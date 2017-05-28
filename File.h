@@ -56,7 +56,7 @@ public:
     bool File::operator ==(const File &other) const;
 
 private:
-    string name;
+    string path;
 
     int id;
 

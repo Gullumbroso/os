@@ -29,24 +29,24 @@ REMARKS:
     v1 is a search value. Represents the word that the framework should search.
 
     Intermediate items and output items are the same:
-    k2 and k3 are strings that represents the file name;
+    k2 and k3 are strings that represents the file path;
     v2 holds the number 1 for the counting of the files;
-    v3 represents the number of files with k2 name.
+    v3 represents the number of files with k2 path.
 
     Map function:
     The map function receives a pointer to a directory and a string, goes over the files in
     the directory and searches for files that contains that string. if the file contains the
-    search word, creates new FileName object with the file name and new FileCount object with the
+    search word, creates new FileName object with the file path and new FileCount object with the
      number 1 (represents one appearance), and emits.
 
     Reduce function:
     the reduce function gets a key which is a FileName object, and a vector of FileCount object,
     which holds multiple instances of the number 1. It then counts the size of this vector -
     this is the amount of times the filename appears in all the directories. it emits a FileName
-     object and a FileCount object - the file name and the number of times is appears.
+     object and a FileCount object - the file path and the number of times is appears.
 
     in the and, the search takes this information (the framework already sorted the items according to
-    the key - the file name) and uses it to print each relevant file in the number of times it appears
+    the key - the file path) and uses it to print each relevant file in the number of times it appears
     in all the directories that were received as the initial input.
 ̿̿
 
