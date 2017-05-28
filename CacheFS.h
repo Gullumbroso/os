@@ -8,6 +8,7 @@
 #define CACHEFS_H
 
 
+#include <cstdio>
 
 // This enum represents a cache algorithm.
 // The possible values are all the cache algorithms that the library supports.

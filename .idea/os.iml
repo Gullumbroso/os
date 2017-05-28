@@ -5,11 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$/CacheFS.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CacheBlock.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/File.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/CacheFS.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/ex3/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/CacheBlock.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/File.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CacheBlock.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CacheFS.h" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">

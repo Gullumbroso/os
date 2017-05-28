@@ -28,6 +28,14 @@ public:
      * the destructor of the cacheBlock class
      */
     ~CacheBlock();
+
+    /**
+     * overide the == operator. comparison by id.
+     * @param other - the other File.
+     * @return true if the id is equal. false, otherwise.
+     */
+    bool operator ==(const CacheBlock &other) const;
+
 };
 
 

@@ -58,7 +58,7 @@ bool File::operator==(const File &other) const {
  * gets the name of the File
  * @return string name of the file.
  */
-string File::getName() {
+string File::getPath() {
     return this->path;
 }
 

@@ -12,3 +12,7 @@ CacheBlock::CacheBlock(string filePath, int pos, void *buf, off_t offset) :
 CacheBlock::~CacheBlock() {
 
 }
+
+bool CacheBlock::operator==(const CacheBlock &other) const {
+    return this->pos == other.pos;
+}

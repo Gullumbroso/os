@@ -5,6 +5,8 @@
 #ifndef UNTITLED1_FILE_H
 #define UNTITLED1_FILE_H
 
+
+#include <stdlib.h>
 #include <string>
 
 using namespace std;
@@ -35,7 +37,7 @@ public:
      * gets the name of the File
      * @return string name of the file.
      */
-    string getName();
+    string getPath();
 
     /**
      * the number of times we called the file.
@@ -53,7 +55,7 @@ public:
      * @param other - the other File.
      * @return true if the id is equal. false, otherwise.
      */
-    bool File::operator ==(const File &other) const;
+    bool operator ==(const File &other) const;
 
 private:
     string path;

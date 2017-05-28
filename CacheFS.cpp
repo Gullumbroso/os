@@ -3,7 +3,7 @@
 //
 
 #include "CacheFS.h"
-#include "File.cpp"
+#include "File.h"
 #include "CacheBlock.h"
 
 #include <string>
@@ -14,20 +14,18 @@
 #include <map>
 #include <iomanip>
 #include <sstream>
-#include <bits/fcntl-linux.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <math.h>
-#include <syslimits.h>
-#include <limits.h>
 #include <stdio.h>
 
 
 
 
 #define FAILURE -1
+#define MAX_PATH 5000
 
 using namespace std;
 cache_algo_t state;
@@ -116,10 +114,10 @@ int CacheFS_open(const char *pathname) {
     auto it = filesMap.find(fd);
     if (it == filesMap.end())
     {
-        File file = File(fd, fullPath);
+        File file = File(fd, string(fullPath));
         filesMap[fd] = file;
-        CacheBlock cacheBlock = CacheBlock(fullPath,0,)
-        cache[fullPath] =
+        char *buf = new char[MAX_PATH];
+        cache[fullPath];
     }
     return 0;
 }
@@ -130,7 +128,8 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset){
     {
         exitWithError("trying to read a file that is not open.");
     }
-
+    File file = it->second;
+    string path = file.getPath();
     size_t counter = blksize;
     int b_read = 0;
     int start = (int) floor(offset/blksize);
@@ -140,8 +139,15 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset){
     if(where<0){
         exitWithError("can't read from file.");
     }
-    for(int i = 0; i<numOfIter ; i++){
-        if()
+
+    for(int i = start; i < end ; i++){
+        // Check if the file exists in the cache
+        if (!cache[path].empty())
+        {
+            vector<CacheBlock> blocks = cache[path];
+            for (auto it = blocks.begin();)
+        }
+
         b_read += (int) read(file_id,buf, blksize);
 
     }
