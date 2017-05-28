@@ -13,13 +13,23 @@
 #include <map>
 #include <iomanip>
 #include <sstream>
+#include <bits/fcntl-linux.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 
 #define FAILURE -1
 
 using namespace std;
 cache_algo_t state;
+struct stat fi;
+size_t blksize;
 
+
+
+map<int, File> filesMap;
 
 /**
  * @brief Prints an error message to the standard error with the name of the failing function.
@@ -32,6 +42,9 @@ void exitWithError(string failingMsg)
 }
 
 int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f_new) {
+    stat("/tmp", &fi);
+    blksize = (size_t) fi.st_blksize;
+
     if (!destroy){
         exitWithError("Can not do init if ChacheFS was not destroyed before");
     } else {
@@ -41,6 +54,7 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
     if(blocks_num <= 0){
         exitWithError("invalid number of blocks");
     }
+
     else if(cache_algo == LRU){
         state = LRU;
 
@@ -83,10 +97,41 @@ int CacheFS_destroy() {
 			   "/tmp" due to the use of NFS in the Aquarium.
  */
 int CacheFS_open(const char *pathname) {
-    ofstream myfile;
-    myfile.open (pathname);
+    int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
+    if (fd<0){
+        exitWithError("open file is not valid.");
+    }
+    auto it = filesMap.find(fd);
+    if (it == filesMap.end())
+    {
+        File file = File(fd, pathname);
+        filesMap[fd] = file;
+    }
     return 0;
 }
+
+int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset){
+    auto it = filesMap.find(file_id);
+    if (it == filesMap.end())
+    {
+        exitWithError("trying to read a file that is not open.");
+    }
+    off_t where = lseek(file_id, offset,SEEK_SET);
+    if(where<0){
+        exitWithError("can't read from file.");
+    }
+    size_t counter = blksize;
+    int b_read = 0;
+    while (counter < count){
+        b_read += (int) read(file_id, buf, blksize);
+        counter += blksize;
+    }
+
+
+    b_read = (int) read(file_id, buf, count);
+    return b_read;
+}
+
 
 int CacheFS_close(int file_id) {
     return 0;
