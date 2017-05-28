@@ -1,0 +1,10 @@
+RunMapReduceFramework started with 4 threads
+Thread Shuffle created [22.05.2017 19:30:03]
+Thread ExecMap created [22.05.2017 19:30:03]
+Thread ExecMap created [22.05.2017 19:30:03]
+Thread ExecMap created [22.05.2017 19:30:03]
+Thread ExecMap created [22.05.2017 19:30:03]
+Thread ExecMap terminated [22.05.2017 19:30:03]
+Thread ExecMap terminated [22.05.2017 19:30:03]
+Thread ExecMap terminated [22.05.2017 19:30:03]
+Thread ExecMap terminated [22.05.2017 19:30:03]
