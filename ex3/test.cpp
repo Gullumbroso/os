@@ -4,7 +4,7 @@
 
 #define NUM_ITERS 10000
 
-#define NUM_PER_ITER 20
+#define NUM_PER_ITER 500
 
 struct NumWrapper : public k1Base, public v1Base, public k2Base, public v2Base, public k3Base, public v3Base
 {

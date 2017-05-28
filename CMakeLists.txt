@@ -3,5 +3,5 @@ project(untitled1)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp CacheFS.cpp)
+set(SOURCE_FILES ex3/main.cpp CacheFS.cpp)
 add_executable(untitled1 ${SOURCE_FILES})

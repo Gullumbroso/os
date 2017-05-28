@@ -1,4 +1,4 @@
-CPPFLAGS  =-std=c++11 -Wall -Wextra -g 
+CPPFLAGS  =-std=c++11 -Wall -Wextra -g -pthread
 
 all: MapReduceFramework.a Search 
 
@@ -18,7 +18,7 @@ Thread.o: Thread.cpp Thread.h MapReduceClient.h
 	g++ $(CPPFLAGS) -c Thread.cpp
 
 Search: MapReduceFramework.a Search.cpp
-	g++ $(CPPFLAGS) -pthread Search.cpp -L. MapReduceFramework.a -o Search
+	g++ $(CPPFLAGS) Search.cpp -L. MapReduceFramework.a -o Search
 
 tar: MapReduceFramework.cpp Search.cpp
 	tar -cvf ex3.tar $^ Makefile README
@@ -27,7 +27,7 @@ valgrind: Search
 	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./Search e /cs/usr/gullumbroso/Desktop/ /cs/usr/gullumbroso/Desktop/OS/ex2/project
 
 gtest: MapReduceFramework.a test.cpp
-	g++ $(CPPFLAGS) -pthread test.cpp -L. MapReduceFramework.a -o gtest
+	g++ $(CPPFLAGS) test.cpp -L. MapReduceFramework.a -o gtest
 
 gvalgrind: gtest
 	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./gtest
