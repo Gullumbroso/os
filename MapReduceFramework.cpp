@@ -83,15 +83,6 @@ void *execMapFunc(void *mrb);
 void *execReduceFunc(void *mrb);
 
 
-// TODO: Delete this method after debugging
-pthread_mutex_t printMutex = PTHREAD_MUTEX_INITIALIZER;
-void safePrint(string msg) {
-    pthread_mutex_lock(&printMutex);
-    cout << msg << endl;
-    pthread_mutex_unlock(&printMutex);
-}
-
-
 /**
  * @brief Prints an error message to the standard error with the name of the failing function.
  * @param failingFunc The name of the failing function.
