@@ -14,15 +14,18 @@ public:
 
     string filePath;
     int pos;
-    void *buf;
-    off_t offset;
+    char *buf;
+    int numOfBytes;
+    int age;
 
+
+    CacheBlock();
 
     /**
      * the main constructor for the cacheBlock repr.
      * @return cacheBlock.
      */
-    CacheBlock(string filePath, int pos, void *buf, off_t offset);
+    CacheBlock(string filePath, int pos, char *buf, int numOfBytes);
 
     /**
      * the destructor of the cacheBlock class

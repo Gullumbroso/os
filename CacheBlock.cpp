@@ -4,9 +4,12 @@
 
 #include "CacheBlock.h"
 
-CacheBlock::CacheBlock(string filePath, int pos, void *buf, off_t offset) :
-        filePath(filePath), pos(pos), buf(buf), offset(offset){
+CacheBlock::CacheBlock() {
+}
 
+CacheBlock::CacheBlock(string filePath, int pos, char *buf, int numOfBytes) :
+        filePath(filePath), pos(pos), buf(buf), numOfBytes(numOfBytes) {
+    age = 0;
 }
 
 CacheBlock::~CacheBlock() {
