@@ -5,6 +5,7 @@
 #include "CacheFS.h"
 #include "File.h"
 #include "CacheBlock.h"
+#include "LRUCache.h"
 
 #include <string>
 #include <stdlib.h>
@@ -20,6 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <math.h>
+#include "Cache.h"
 #include <stdio.h>
 
 
@@ -34,9 +36,9 @@ size_t blksize;
 int blocksNum;
 int usedBlocksNum;
 
-
-map<string, vector<CacheBlock>> cache;
 map<int, File> filesMap;
+Cache cache;
+
 
 /**
  * @brief Prints an error message to the standard error with the name of the failing function.
@@ -45,27 +47,6 @@ map<int, File> filesMap;
 void exitWithError(string failingMsg) {
     cerr << "CacheFS Failure: " << failingMsg << endl;
     exit(FAILURE);
-}
-
-int cacheBlock(CacheBlock block, string path) {
-    if (usedBlocksNum < blocksNum) {
-        cache[path].push_back(block);
-        usedBlocksNum++;
-        return SUCCESS;
-    }
-    if (state == LRU) {
-
-    } else if (state == LFU) {
-
-    } else if (state == FBR) {
-
-    } else {
-        return FAILURE;
-    }
-}
-
-void updateCacheStats() {
-
 }
 
 int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f_new) {
@@ -83,10 +64,12 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
     if (blocks_num <= 0) {
         exitWithError("invalid number of blocks");
     } else if (cache_algo == LRU) {
+        cache = LRUCache(blocks_num);
         state = LRU;
 
-    } else if (cache_algo == LFU) {
-        state = LFU;
+
+    } else if (cache_algo == LFUCache) {
+        state = LFUCache;
 
     } else if (cache_algo == FBR) {
         state = FBR;
@@ -136,7 +119,7 @@ int CacheFS_open(const char *pathname) {
         File file = File(fd, string(fullPath));
         filesMap[fd] = file;
         char *buf = new char[MAX_PATH];
-        cache[fullPath];
+        cache.blocks[fullPath];
     }
     return 0;
 }
@@ -153,18 +136,16 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     int b_read = 0;
     int start = (int) floor(offset / blksize);
     int end = (int) floor((offset + count) / blksize);
-    int numOfIter = end - start;
     off_t where = lseek(file_id, start, SEEK_SET);
     if (where < 0) {
         exitWithError("can't read from file.");
     }
 
-    vector<CacheBlock> blocks = cache[path];
+    vector<CacheBlock> blocks = cache.blocks[path];
     for (int i = start; i < end; i++) {
         // Check if the block of the file exists in the cache
-        auto blockIt = find(blocks.begin(), blocks.end(), i);
-        if (blockIt != blocks.end()) {
-            CacheBlock block = *blockIt;
+        CacheBlock block = cache.readBlock(path, i);
+        if (block != nullptr) {
             b_read += block.numOfBytes;
             *currentPointer = *block.buf;
             currentPointer += block.numOfBytes;
@@ -176,11 +157,10 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
             }
             currentPointer += numOfBytes;
             b_read += numOfBytes;
-            CacheBlock block = CacheBlock(path, i, currentPointer, numOfBytes);
-            cacheBlock(block, path);
+            CacheBlock blockToAdd = CacheBlock(path, i, currentPointer, numOfBytes);
+            cache.cacheBlock(blockToAdd);
         }
 
-        updateCacheStats();
     }
 
     return b_read;

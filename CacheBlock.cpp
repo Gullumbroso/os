@@ -9,7 +9,7 @@ CacheBlock::CacheBlock() {
 
 CacheBlock::CacheBlock(string filePath, int pos, char *buf, int numOfBytes) :
         filePath(filePath), pos(pos), buf(buf), numOfBytes(numOfBytes) {
-    age = 0;
+    references = 1;
 }
 
 CacheBlock::~CacheBlock() {
@@ -17,5 +17,5 @@ CacheBlock::~CacheBlock() {
 }
 
 bool CacheBlock::operator==(const CacheBlock &other) const {
-    return this->pos == other.pos;
+    return this->pos == other.pos && this->filePath == other.filePath;
 }

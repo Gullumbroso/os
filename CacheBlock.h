@@ -16,7 +16,7 @@ public:
     int pos;
     char *buf;
     int numOfBytes;
-    int age;
+    int references;
 
 
     CacheBlock();
