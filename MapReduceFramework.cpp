@@ -529,7 +529,7 @@ void shuffleAdd(k2Base *k2, v2Base *v2)
     bool addPair = true;
     for (auto it = shuffleRetVec.begin(); it < shuffleRetVec.end(); it++)
     {
-        f pair = *it;
+        SHUFFLE_RET pair = *it;
         if (!(*k2 < *pair.first) && !(*pair.first < *k2))
         {
             pair.second.push_back(v2);
