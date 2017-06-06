@@ -30,7 +30,7 @@ http://www.computerhope.com/unix/udiff.htm
 _______________________________________________________________________
 
 Notes:
-1. Make sure the name of the directory you are in does not contain
+1. Make sure the path of the directory you are in does not contain
 any space or hebrew letters or it might not compile.
 2. diff.txt could be produced using the shell's diff command.
 _______________________________________________________________________
