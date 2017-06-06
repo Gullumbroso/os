@@ -11,21 +11,23 @@
 
 using namespace std;
 
-class File {
+class FileDesc {
 
 public:
+    FileDesc();
     /**
      * the main constructor for the file repr.
      * @param id - the id to set for the file.
      * @param name - the name to set for the file.
      * @return the File.
      */
-    File(int id, string name);
+    FileDesc(int id, string name);
+
 
     /**
      * the destructor of the File class
      */
-    ~File();
+    ~FileDesc();
 
     /**
      * gets the ID of the File
@@ -55,7 +57,7 @@ public:
      * @param other - the other File.
      * @return true if the id is equal. false, otherwise.
      */
-    bool operator ==(const File &other) const;
+    bool operator ==(const FileDesc &other) const;
 
 private:
     string path;

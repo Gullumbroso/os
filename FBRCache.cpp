@@ -4,12 +4,12 @@
 
 #include "FBRCache.h"
 
-FBRCache::FBRCache(int blockNum, double newBlocks, double oldBlocks) : blockNum(blockNum), newBlocks(newBlocks),
+FBRCache::FBRCache(int blockNum, double newBlocks, double oldBlocks) : Cache(blockNum), newBlocks(newBlocks),
 oldBlocks(oldBlocks){
 
 }
 
-void FBRCache::cacheBlock(CacheBlock &block) {
+void FBRCache::cacheBlock(CacheBlock *block) {
     if (cacheQueue.size() >= blockNum) {
         CacheBlock *toErase = cacheQueue.back();
         string fp = toErase->filePath;
@@ -31,15 +31,17 @@ void FBRCache::cacheBlock(CacheBlock &block) {
         }
         int id = chosenBlock->pos;
         cacheQueue.erase(minIt);
-        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), id);
+
+        CacheBlock * chosenToErase = Cache::findBlock(chosenBlock->filePath, id);
+        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), chosenToErase);
         blocks[fp].erase(it2);
     }
-    cacheQueue.insert(cacheQueue.begin(), &block);
-    blocks[block.filePath].push_back(block);
+    cacheQueue.insert(cacheQueue.begin(), block);
+    blocks[block->filePath].push_back(block);
 }
 
 CacheBlock *FBRCache::readBlock(string path, int blockNum) {
-    CacheBlock *block = Cache::readBlock(path, blockNum);
+    CacheBlock *block = Cache::findBlock(path, blockNum);
     if (block != nullptr) {
         auto it = find(cacheQueue.begin(), cacheQueue.end(), block);
         int endOfNew = (int) ceil(cacheQueue.size()/this->newBlocks);
@@ -51,4 +53,23 @@ CacheBlock *FBRCache::readBlock(string path, int blockNum) {
         cacheQueue.insert(cacheQueue.begin(), toAdd);
     }
     return block;
+}
+
+string FBRCache::printCache() {
+    string finalOutput;
+    for(auto it = cacheQueue.begin() ; it < cacheQueue.end();it++){
+        CacheBlock * block = *it;
+        finalOutput += block->filePath;
+        finalOutput+=" ";
+        finalOutput+= block->pos;
+        finalOutput+="\n";
+    }
+    return finalOutput;
+}
+
+FBRCache::~FBRCache() {
+    for (auto it = cacheQueue.begin(); it < cacheQueue.end(); it++) {
+        CacheBlock *block = *it;
+        delete block;
+    }
 }

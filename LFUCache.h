@@ -25,8 +25,10 @@ class LFUCache: public Cache {
 public:
     set<CacheBlock *,bool(*)(CacheBlock *,CacheBlock *)> cacheQueue;
     LFUCache(int blockNum);
-    void cacheBlock(CacheBlock &block) override;
-    CacheBlock *readBlock(string path, int blockNum) override ;
+    void cacheBlock(CacheBlock *block) override;
+    CacheBlock *readBlock(string path, int blockNum) override;
+    string printCache() override ;
+    ~LFUCache();
 };
 
 

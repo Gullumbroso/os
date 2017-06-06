@@ -25,8 +25,10 @@ public:
     double oldBlocks;
     vector<CacheBlock *> cacheQueue;
     FBRCache(int blockNum, double newBlocks, double oldBlocks);
-    void cacheBlock(CacheBlock &block) override;
-    CacheBlock* readBlock(string path, int blockNum) override ;
+    void cacheBlock(CacheBlock *block) override;
+    CacheBlock* readBlock(string path, int blockNum) override;
+    string printCache() override ;
+    ~FBRCache();
 };
 
 

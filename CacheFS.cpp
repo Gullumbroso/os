@@ -3,29 +3,18 @@
 //
 
 #include "CacheFS.h"
-#include "File.h"
+#include "FileDesc.h"
 #include "CacheBlock.h"
 #include "LRUCache.h"
 #include "LFUCache.h"
 #include "FBRCache.h"
 
 
-#include <string>
-#include <stdlib.h>
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <algorithm>
-#include <map>
-#include <iomanip>
-#include <sstream>
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <math.h>
-#include "Cache.h"
-#include <stdio.h>
+#include <stdlib.h>
+#include <cstring>
 
 
 #define SUCCESS 0
@@ -38,8 +27,10 @@ struct stat fi;
 size_t blksize;
 bool destroy = true;
 
-map<int, File> filesMap;
-Cache cache;
+map<int, FileDesc> filesMap;
+Cache *cache;
+int hits;
+int misses;
 
 
 /**
@@ -63,26 +54,30 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
     if (blocks_num <= 0) {
         exitWithError("invalid number of blocks");
     }
+    hits = 0;
+    misses = 0;
     if (cache_algo == LRU) {
-        cache = LRUCache(blocks_num);
+        cache =  new LRUCache(blocks_num);
         state = LRU;
     } else if (cache_algo == LFU) {
-        cache = LFUCache(blocks_num);
+        cache = new LFUCache(blocks_num);
         state = LFU;
     } else if (cache_algo == FBR) {
         if(f_old >= 1 || f_old <= 0 || f_new >= 1 || f_new <= 0 || f_old+f_new > 1){
             exitWithError("invalid f_old or f_new input");
         }
-        cache = FBRCache(blocks_num, f_new,f_old);
+        cache = new FBRCache(blocks_num, f_new,f_old);
         state = FBR;
     } else {
         return -1;
     }
+    return SUCCESS;
 }
 
 int CacheFS_destroy() {
+    delete cache;
     destroy = true;
-    return 0;
+    return SUCCESS;
 }
 
 /**
@@ -111,23 +106,22 @@ int CacheFS_open(const char *pathname) {
     if (!res) {
         exitWithError("can not get full path");
     }
-    string path = string(pathname);
-    if(!(path.find("/tmp"))){
+    string path = string(fullPath);
+    if(path.find("/tmp")== string::npos){
         exitWithError("cannot open file");
     }
-    int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
+    int fd = open(fullPath, O_RDONLY | O_DIRECT | O_SYNC);
     if (fd < 0) {
         exitWithError("open file is not valid.");
     }
 
     auto it = filesMap.find(fd);
     if (it == filesMap.end()) {
-        File file = File(fd, string(fullPath));
+        FileDesc file = FileDesc(fd, path);
         filesMap[fd] = file;
-        char *buf = new char[MAX_PATH];
-        cache.blocks[fullPath];
+        cache->blocks[fullPath];
     }
-    return 0;
+    return fd;
 }
 
 int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
@@ -135,38 +129,39 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     if (it == filesMap.end()) {
         exitWithError("trying to read a file that is not open.");
     }
-    char *currentPointer = static_cast<char*>(buf);
-    File file = it->second;
+
+    FileDesc file = it->second;
     string path = file.getPath();
     int b_read = 0;
-    int start = (int) floor(offset / blksize);
-    int end = (int) floor((offset + count) / blksize);
-    off_t where = lseek(file_id, start, SEEK_SET);
+    double blockSize = (double) blksize;
+    long double start = floor(offset / blockSize);
+    int end = (int) ceil((offset + count)/ blockSize);
+    off_t where = lseek(file_id, (size_t) start, SEEK_SET);
     if (where < 0) {
         exitWithError("can't read from file.");
     }
 
-    vector<CacheBlock> blocks = cache.blocks[path];
-    for (int i = start; i < end; i++) {
+    for (int i = (int) start; i < end; i++) {
+        char* curbuf = (char*)aligned_alloc(blksize,blksize);
+
         // Check if the block of the file exists in the cache
-        CacheBlock *block = cache.readBlock(path, i);
+        CacheBlock *block = cache->readBlock(path, i);
         if (block != nullptr) {
+            hits++;
             b_read += block->numOfBytes;
-            *currentPointer = *block->buf;
-            currentPointer += block->numOfBytes;
+            curbuf = block->buf;
         } else {
+            misses++;
             // The block isn't saved in the cache
-            int numOfBytes = (int) read(file_id, currentPointer, blksize);
+            int numOfBytes = (int) pread(file_id, curbuf, (size_t) blksize, i*(size_t)blksize);
             if (numOfBytes < 0) {
                 exitWithError("Couldn't read from a file.");
             }
-            *currentPointer = *(static_cast<char*>(buf));
-            currentPointer += numOfBytes;
             b_read += numOfBytes;
-            CacheBlock blockToAdd = CacheBlock(path, i, currentPointer, numOfBytes);
-            cache.cacheBlock(blockToAdd);
+            CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, numOfBytes);
+            cache->cacheBlock(blockToAdd);
         }
-
+        memcpy(buf, curbuf + (offset%blksize) , count);
     }
 
     return b_read;
@@ -174,5 +169,27 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
 
 
 int CacheFS_close(int file_id) {
-    return 0;
+    return close(file_id);
+}
+
+int CacheFS_print_cache (const char *log_path){
+    ofstream file;
+    file.open(log_path, std::ofstream::out | std::ofstream::app);
+    if(file.fail()){
+        exitWithError("can not open file");
+    }
+    file<<cache->printCache();
+    file.close();
+    return SUCCESS;
+}
+
+int CacheFS_print_stat (const char *log_path){
+    ofstream file;
+    file.open(log_path, std::ofstream::out | std::ofstream::app);
+    if(file.fail()){
+        exitWithError("can not open file");
+    }
+    file<<"Hits number: " << to_string(hits) << endl <<"Misses number: " << to_string(misses) << endl;
+    file.close();
+    return SUCCESS;
 }

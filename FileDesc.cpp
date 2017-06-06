@@ -2,7 +2,7 @@
 // Created by avishadler on 5/28/17.
 //
 
-#include "File.h"
+#include "FileDesc.h"
 
 /**
  * the main constructor for the file repr.
@@ -10,14 +10,15 @@
  * @param name - the name to set for the file.
  * @return the File.
  */
-File::File(int id, string name) : id(id) , path(name) {
+
+FileDesc::FileDesc(int id, string name) : id(id) , path(name) {
     incFrequency();
 }
 
 /**
  * the destructor of the File class
  */
-File::~File() {
+FileDesc::~FileDesc() {
 
 }
 
@@ -26,7 +27,7 @@ File::~File() {
  * gets the ID of the File
  * @return ID of the file.
  */
-int File::getId() {
+int FileDesc::getId() {
     return this->id;
 }
 
@@ -34,14 +35,14 @@ int File::getId() {
  * the number of times we called the file.
  * @return the number of times we called the file.
  */
-int File::getFrequency() {
+int FileDesc::getFrequency() {
     return this->frequency;
 }
 
 /**
  * increment by 1 the number of times we called the file.
  */
-void File::incFrequency() {
+void FileDesc::incFrequency() {
     this->frequency++;
 
 }
@@ -50,7 +51,7 @@ void File::incFrequency() {
  * @param other - the other File.
  * @return true if the id is equal. false, otherwise.
  */
-bool File::operator==(const File &other) const {
+bool FileDesc::operator==(const FileDesc &other) const {
     return this->path == other.path;
 }
 
@@ -58,8 +59,12 @@ bool File::operator==(const File &other) const {
  * gets the name of the File
  * @return string name of the file.
  */
-string File::getPath() {
+string FileDesc::getPath() {
     return this->path;
+}
+
+FileDesc::FileDesc() {
+
 }
 
 

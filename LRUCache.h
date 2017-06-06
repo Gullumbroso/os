@@ -22,8 +22,10 @@ class LRUCache : public Cache {
 public:
     vector<CacheBlock *> cacheQueue;
     LRUCache(int blockNum);
-    void cacheBlock(CacheBlock &block) override;
+    void cacheBlock(CacheBlock *block) override;
     CacheBlock* readBlock(string path, int blockNum) override ;
+    string printCache() override ;
+    ~LRUCache();
 
 };
 

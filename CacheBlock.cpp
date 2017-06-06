@@ -17,5 +17,5 @@ CacheBlock::~CacheBlock() {
 }
 
 bool CacheBlock::operator==(const CacheBlock &other) const {
-    return this->pos == other.pos && this->filePath == other.filePath;
+    return (this->pos == other.pos) && (this->filePath == other.filePath);
 }
