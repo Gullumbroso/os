@@ -7,8 +7,7 @@
 #ifndef CACHEFS_H
 #define CACHEFS_H
 
-
-#include <cstdio>
+#include <stdlib.h>
 
 // This enum represents a cache algorithm.
 // The possible values are all the cache algorithms that the library supports.
@@ -17,8 +16,6 @@ enum cache_algo_t{
 	LFU,
 	FBR
 };
-
-bool destroy = true;
 
 /**
  Initializes the CacheFS.
@@ -124,7 +121,7 @@ int CacheFS_open(const char *pathname);
  */
 int CacheFS_close(int file_id);
 
-/** 
+/**
    Read data from an open file.
 
    Read should return exactly the number of bytes requested except
@@ -135,7 +132,7 @@ int CacheFS_close(int file_id);
    In order to read the content of a file in CacheFS,
    We decided to implement a function similar to POSIX's pread, with
    the same parameters.
-   
+
  Returned value:
     In case of success:
 		Non negative value represents the number of bytes read.
@@ -148,10 +145,10 @@ int CacheFS_close(int file_id);
 			2. invalid parameters
 				a. file_id is valid if"f it was returned by
 			       CacheFS_open, and it wasn't already closed.
-				b. buf is invalid if it is NULL. 
-				c. offset is invalid if it's negative  
+				b. buf is invalid if it is NULL.
+				c. offset is invalid if it's negative
 				   [Note: offset after the end of the file is valid.
-				    In this case, you need to return zero, 
+				    In this case, you need to return zero,
 				    like posix's pread does.]
 				[Note: any value of count is valid.]
  */
@@ -167,8 +164,9 @@ Each line contains the following values separated by a single space.
 	2. The number of the block. Pay attention: this is not the number in the cache,
 	   but the enumeration within the file itself, starting with 0 for the first
 	   block in each file.
-The order of the entries is from the last block that will be evicted from the cache
+For LRU and LFU The order of the entries is from the last block that will be evicted from the cache
 to the first (next) block that will be evicted.
+For FBR use the LRU order (the order of the stack).
 
 Notes:
 	1. If log_path is a path to existed file - the function will append the cache
