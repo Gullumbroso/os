@@ -48,12 +48,10 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
     blksize = (size_t) fi.st_blksize;
 
     if (!destroy) {
-        exitWithError("Can not do init if ChacheFS was not destroyed before");
-    } else {
-        destroy = false;
+        return FAILURE;
     }
     if (blocks_num <= 0) {
-        exitWithError("invalid number of blocks");
+        return FAILURE;
     }
     hits = 0;
     misses = 0;
@@ -65,13 +63,14 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
         state = LFU;
     } else if (cache_algo == FBR) {
         if(f_old >= 1 || f_old <= 0 || f_new >= 1 || f_new <= 0 || f_old+f_new > 1){
-            exitWithError("invalid f_old or f_new input");
+            return FAILURE;
         }
         cache = new FBRCache(blocks_num, f_new,f_old);
         state = FBR;
     } else {
         return -1;
     }
+    destroy = false;
     return SUCCESS;
 }
 
@@ -80,6 +79,13 @@ int CacheFS_destroy() {
     filesMap.clear();
     destroy = true;
     return SUCCESS;
+}
+
+
+std::ifstream::pos_type filesize(const char* filename)
+{
+    std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+    return in.tellg();
 }
 
 /**
@@ -105,16 +111,16 @@ int CacheFS_destroy() {
 int CacheFS_open(const char *pathname) {
     char *res = realpath(pathname, NULL);
     if (!res) {
-        exitWithError("can not get full path");
+        return FAILURE;
     }
     string fullPath = string(res);
     string path = string(fullPath);
     if(path.find("/tmp")== string::npos){
-        exitWithError("cannot open file");
+        return FAILURE;
     }
     int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
     if (fd < 0) {
-        exitWithError("open file is not valid.");
+        return FAILURE;
     }
 
     auto it = filesMap.find(fd);
@@ -130,7 +136,7 @@ int CacheFS_open(const char *pathname) {
 int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     auto it = filesMap.find(file_id);
     if (it == filesMap.end()) {
-        exitWithError("trying to read a file that is not open.");
+        return FAILURE;
     }
 
     FileDesc file = it->second;
@@ -141,40 +147,44 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     int end = (int) ceil((offset + count)/ blockSize);
     off_t where = lseek(file_id, (size_t) start, SEEK_SET);
     if (where < 0) {
-        exitWithError("can't read from file.");
+        return FAILURE;
     }
-
     for (int i = (int) start; i < end; i++) {
         char* curbuf;
         // Check if the block of the file exists in the cache
         CacheBlock *block = cache->readBlock(path, i);
+        int endOfRead;
         if (block != nullptr) {
             hits++;
-            b_read += block->numOfBytes;
             curbuf = block->buf;
         } else {
             // The block isn't saved in the cache
-            misses++;
             curbuf = (char*)aligned_alloc(blksize,blksize);
             int numOfBytes = (int) pread(file_id, curbuf, (size_t) blksize, i*(size_t)blksize);
             if (numOfBytes < 0) {
-                exitWithError("Couldn't read from a file.");
+                return FAILURE;
             }
-            int bytes = numOfBytes - (int) (offset%blksize);
-            if(bytes < 0){
-                bytes = 0;
-            }
-            b_read += bytes;
             if (numOfBytes == 0) continue;
-            CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, numOfBytes);
+            misses++;
+            CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, (int) blksize);
             cache->cacheBlock(blockToAdd);
         }
         memcpy(buf, curbuf + (offset%blksize) , count);
     }
+    int sizeOfFile = (int) filesize(path.c_str());
+    if(offset+count > sizeOfFile){
+        b_read = sizeOfFile- (int) offset;
+        if(b_read < 0){
+            b_read = 0;
+        }
+    }
+    else{
+        b_read = (int) count;
+    }
+
 
     return b_read;
 }
-
 
 int CacheFS_close(int file_id) {
     return close(file_id);
@@ -184,7 +194,7 @@ int CacheFS_print_cache (const char *log_path){
     ofstream file;
     file.open(log_path, std::ofstream::out | std::ofstream::app);
     if(file.fail()){
-        exitWithError("can not open file");
+        return FAILURE;
     }
     file<<cache->printCache();
     file.close();
@@ -195,8 +205,9 @@ int CacheFS_print_stat (const char *log_path){
     ofstream file;
     file.open(log_path, std::ofstream::out | std::ofstream::app);
     if(file.fail()){
-        exitWithError("can not open file");
+        return FAILURE;
     }
+    cout << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
     file << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
     file.close();
     return SUCCESS;

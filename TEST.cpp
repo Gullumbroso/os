@@ -8,8 +8,6 @@
 #include <cstring>
 #include "CacheFS.h"
 
-using namespace std;
-
 void sanityCheck()
 {
 
@@ -19,6 +17,10 @@ void sanityCheck()
     struct stat fi;
     stat("/tmp", &fi);
     size_t blockSize = (size_t)fi.st_blksize;
+
+    std::ofstream eraser;
+    eraser.open("/tmp/sanity_test.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.close();
 
     // create the files for the test:
     std::ofstream outfile ("/tmp/sanity_test.txt");
@@ -32,12 +34,9 @@ void sanityCheck()
     CacheFS_init(10, LRU, 0.1, 0.1);
     int fd = CacheFS_open("/tmp/sanity_test.txt");
 
-    char data[11];
-    data[10] = '\0';
+    char data[11] = "\0";
     CacheFS_pread(fd, &data, 10, 0); // read from beginning of block
-    if (strcmp(data, "TEST TEST \0")) {
-        ok = false;
-    }
+    if (strcmp(data, "TEST TEST ")) {ok = false;}
     CacheFS_pread(fd, &data, 10, 5*blockSize + 1); // read from middle of block
     if (strcmp(data, "EST TEST T")) {ok = false;}
     CacheFS_pread(fd, &data, 10, 5*blockSize + 2); // read from middle of block
@@ -47,7 +46,6 @@ void sanityCheck()
     CacheFS_pread(fd, &data, 10, 5*blockSize + 4); // read from middle of block
     if (strcmp(data, " TEST TEST")) {ok = false;}
 
-    std::ofstream eraser;
     eraser.open("/tmp/sanity_test_cache.txt", std::ofstream::out | std::ofstream::trunc);
     eraser.close();
 
@@ -58,6 +56,7 @@ void sanityCheck()
     char cacheResults[10000] = "\0";
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(cacheResults, 10000);
+
         if (strcmp(cacheResults, "/tmp/sanity_test.txt 5\n/tmp/sanity_test.txt 0\n")) {ok = false;}
     }
     resultsFileInput.close();
@@ -90,6 +89,7 @@ void sanityCheck()
     {
         std::cout << "Sanity Check Failed!\n";
     }
+
 }
 
 void doubleOpenClose()
@@ -101,7 +101,7 @@ void doubleOpenClose()
     size_t blockSize = (size_t)fi.st_blksize;
 
     // create the files for the test:
-    std::ofstream outfile ("/tmp/sanity_test.txt");
+    std::ofstream outfile ("/tmp/double_test.txt");
     for (unsigned int i=0; i<10*blockSize; i++)
     {
         outfile << "TEST ";
@@ -110,8 +110,8 @@ void doubleOpenClose()
 
     // open and read from the file using two file descriptors:
     CacheFS_init(10, LRU, 0.1, 0.1);
-    int fd1 = CacheFS_open("/tmp/sanity_test.txt");
-    int fd2 = CacheFS_open("/tmp/sanity_test.txt");
+    int fd1 = CacheFS_open("/tmp/double_test.txt");
+    int fd2 = CacheFS_open("/tmp/double_test.txt");
 
     char data[11];
     data[10] = '\0';
@@ -161,9 +161,9 @@ void offsetTooBig()
 
     // create the files for the test:
     std::ofstream eraser;
-    eraser.open("/tmp/sanity_test.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.open("/tmp/offset_test.txt", std::ofstream::out | std::ofstream::trunc);
     eraser.close();
-    std::ofstream outfile ("/tmp/sanity_test.txt");
+    std::ofstream outfile ("/tmp/offset_test.txt");
     for (unsigned int i=0; i<blockSize/2; i++)
     {
         outfile << "A";
@@ -172,7 +172,7 @@ void offsetTooBig()
 
     // open and read from the file with an offset that is too big:
     CacheFS_init(10, LRU, 0.1, 0.1);
-    int fd = CacheFS_open("/tmp/sanity_test.txt");
+    int fd = CacheFS_open("/tmp/offset_test.txt");
 
     char data[11] = "\0";
     int ret = CacheFS_pread(fd, &data, 10, blockSize); // the offset is larger than the file size
@@ -266,6 +266,7 @@ void basicLRU()
     char statsResults[10000] = "\0";
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(statsResults, 10000);
+
         if (!(!strcmp(statsResults, "Hits number: 1.\nMisses number: 6.\n") || !strcmp(statsResults, "Hits number: 1\nMisses number: 6\n")))
         {
             ok = false;
@@ -520,7 +521,7 @@ void basicFBR()
                               "/tmp/FBR1.txt 0\n/tmp/FBR1.txt 6\n/tmp/FBR1.txt 5\n/tmp/FBR1.txt 4\n/tmp/FBR1.txt 3\n"
                               "/tmp/FBR2.txt 2\n/tmp/FBR2.txt 1\n/tmp/FBR2.txt 0\n/tmp/FBR1.txt 6\n/tmp/FBR1.txt 5\n"
                               "/tmp/FBR1.txt 4\n/tmp/FBR1.txt 3\n/tmp/FBR1.txt 2\n/tmp/FBR1.txt 1\n/tmp/FBR1.txt 0\n";
-
+        
         if (strcmp(cacheResults, cacheCorrect)) {ok = false;}
     }
     resultsFileInput.close();
@@ -531,8 +532,7 @@ void basicFBR()
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(statsResults, 10000);
 
-
-        if (!(!strcmp(statsResults, "Hits number: 4.\nMisses number: 11.\n") || !strcmp(statsResults, "Hits number: 10\nMisses number: 15\n")))
+        if (!(!strcmp(statsResults, "Hits number: 4.\nMisses number: 11.\n") || !strcmp(statsResults, "Hits number: 4\nMisses number: 11\n")))
         {
             ok = false;
         }
@@ -543,7 +543,7 @@ void basicFBR()
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(statsResults, 10000);
 
-        if (!(!strcmp(statsResults, "Hits number: 8.\nMisses number: 13.\n") || !strcmp(statsResults, "Hits number: 10\nMisses number: 15\n")))
+        if (!(!strcmp(statsResults, "Hits number: 8.\nMisses number: 13.\n") || !strcmp(statsResults, "Hits number: 8\nMisses number: 13\n")))
         {
             ok = false;
         }
@@ -560,6 +560,189 @@ void basicFBR()
     }
 }
 
+void readSeveralBlocksAtOnce()
+{
+    bool ok = true;
+
+    // get the block size:
+    struct stat fi;
+    stat("/tmp", &fi);
+    size_t blockSize = (size_t)fi.st_blksize;
+
+    // create the files for the test:
+    std::ofstream outfile1 ("/tmp/Several1.txt");
+    for (unsigned int i=0; i<10*blockSize; i++)
+    {
+        outfile1 << "A";
+    }
+    outfile1.close();
+    std::ofstream outfile2 ("/tmp/Several2.txt");
+    for (unsigned int i=0; i<10*blockSize; i++)
+    {
+        outfile2 << "B";
+    }
+    outfile2.close();
+
+    std::ofstream eraser;
+    eraser.open("/tmp/Several_cache.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.close();
+
+    CacheFS_init(3, LRU, 0.1, 0.1);
+    int fd1 = CacheFS_open("/tmp/Several1.txt");
+    int fd2 = CacheFS_open("/tmp/Several2.txt");
+
+    char data[3*blockSize] = "\0";
+    CacheFS_pread(fd1, &data, 2*blockSize + 10, 0*blockSize); // read three blocks at once
+    CacheFS_print_cache("/tmp/Several_cache.txt");
+    CacheFS_pread(fd1, &data, 2*blockSize + 10, 2*blockSize); // read three blocks at once (one already in cache)
+    CacheFS_print_cache("/tmp/Several_cache.txt");
+    CacheFS_pread(fd1, &data, 2*blockSize + 10, 0*blockSize); // read three blocks at once (one should be in cache but evicted because we read the blocks one by one)
+    CacheFS_print_cache("/tmp/Several_cache.txt");
+
+    // review cache:
+    std::ifstream resultsFileInput;
+    resultsFileInput.open("/tmp/Several_cache.txt");
+    char cacheResults[10000] = "\0";
+    if (resultsFileInput.is_open()) {
+        resultsFileInput.read(cacheResults, 10000);
+
+        char cacheCorrect[] = "/tmp/Several1.txt 2\n/tmp/Several1.txt 1\n/tmp/Several1.txt 0\n/tmp/Several1.txt 4\n"
+                              "/tmp/Several1.txt 3\n/tmp/Several1.txt 2\n/tmp/Several1.txt 2\n/tmp/Several1.txt 1\n/tmp/Several1.txt 0\n";
+
+        if (strcmp(cacheResults, cacheCorrect)) {ok = false;}
+    }
+    resultsFileInput.close();
+
+    eraser.open("/tmp/Several_stats.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.close();
+
+    // review stats:
+    CacheFS_print_stat("/tmp/Several_stats.txt");
+    resultsFileInput.open("/tmp/Several_stats.txt");
+    char statsResults[10000] = "\0";
+    if (resultsFileInput.is_open()) {
+        resultsFileInput.read(statsResults, 10000);
+
+        if (!(!strcmp(statsResults, "Hits number: 1.\nMisses number: 8.\n") || !strcmp(statsResults, "Hits number: 1\nMisses number: 8\n")))
+        {
+            ok = false;
+        }
+    }
+    resultsFileInput.close();
+
+    CacheFS_close(fd1);
+    CacheFS_close(fd2);
+    CacheFS_destroy();
+
+    if (ok)
+    {
+        std::cout << "Several Blocks Check Passed!\n";
+    }
+    else
+    {
+        std::cout << "Several Blocks Check Failed!\n";
+    }
+
+}
+
+void stressTest()
+{
+    bool ok = true;
+
+    // get the block size:
+    struct stat fi;
+    stat("/tmp", &fi);
+    size_t blockSize = (size_t)fi.st_blksize;
+
+    // create the files for the test:
+    std::ofstream outfile1 ("/tmp/stress1.txt");
+    for (unsigned int i=0; i<10*blockSize; i++)
+    {
+        outfile1 << "A";
+    }
+    outfile1.close();
+    std::ofstream outfile2 ("/tmp/stress2.txt");
+    for (unsigned int i=0; i<10*blockSize; i++)
+    {
+        outfile2 << "B";
+    }
+    outfile2.close();
+
+    std::ofstream eraser;
+
+    CacheFS_init(5, LRU, 0.1, 0.1);
+    int fd1 = CacheFS_open("/tmp/Several1.txt");
+    int fd2 = CacheFS_open("/tmp/Several2.txt");
+
+    char data[10*blockSize] = {0};
+    for (int i = 0; i<10000; i++)
+    {
+        CacheFS_pread(fd1, &data, 6*blockSize, 0*blockSize); // read 6 blocks again and again
+    }
+
+    eraser.open("/tmp/stress_stats.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.close();
+
+    // review stats:
+    std::ifstream resultsFileInput;
+    CacheFS_print_stat("/tmp/stress_stats.txt");
+    resultsFileInput.open("/tmp/stress_stats.txt");
+    char statsResults[10000] = "\0";
+    if (resultsFileInput.is_open()) {
+        resultsFileInput.read(statsResults, 10000);
+
+        if (!(!strcmp(statsResults, "Hits number: 0.\nMisses number: 60000.\n") || !strcmp(statsResults, "Hits number: 0\nMisses number: 60000\n")))
+        {
+            ok = false;
+        }
+    }
+    resultsFileInput.close();
+
+    CacheFS_close(fd1);
+    CacheFS_close(fd2);
+    CacheFS_destroy();
+
+    CacheFS_init(6, LRU, 0.1, 0.1);
+    fd1 = CacheFS_open("/tmp/Several1.txt");
+    fd2 = CacheFS_open("/tmp/Several2.txt");
+
+    for (int i = 0; i<10000; i++)
+    {
+        CacheFS_pread(fd1, &data, 6*blockSize, 0*blockSize); // read 6 blocks again and again
+    }
+
+    eraser.open("/tmp/stress_stats_2.txt", std::ofstream::out | std::ofstream::trunc);
+    eraser.close();
+
+    // review stats:
+    CacheFS_print_stat("/tmp/stress_stats_2.txt");
+    resultsFileInput.open("/tmp/stress_stats_2.txt");
+    if (resultsFileInput.is_open()) {
+        resultsFileInput.read(statsResults, 10000);
+
+        if (!(!strcmp(statsResults, "Hits number: 59994.\nMisses number: 6.\n") || !strcmp(statsResults, "Hits number: 59994\nMisses number: 6\n")))
+        {
+            ok = false;
+        }
+    }
+    resultsFileInput.close();
+
+    CacheFS_close(fd1);
+    CacheFS_close(fd2);
+    CacheFS_destroy();
+
+
+    if (ok)
+    {
+        std::cout << "Stress Test Passed!\n";
+    }
+    else
+    {
+        std::cout << "Stress Test Failed!\n";
+    }
+
+}
+
 int main()
 {
     sanityCheck();
@@ -568,6 +751,8 @@ int main()
     basicLRU();
     basicLFU();
     basicFBR();
+    readSeveralBlocksAtOnce();
+    stressTest();
 
     return 0;
 }

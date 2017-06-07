@@ -45,7 +45,7 @@ string LFUCache::printCache() {
             finalOutput+= to_string(block->pos);
             finalOutput+="\n";
         }
-        return finalOutput;
+    return finalOutput;
 }
 
 LFUCache::~LFUCache() {
