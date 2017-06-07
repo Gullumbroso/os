@@ -13,8 +13,14 @@ using namespace std;
 
 class FileDesc {
 
+private:
+    int id;
+    string path;
+    int frequency;
+
 public:
     FileDesc();
+
     /**
      * the main constructor for the file repr.
      * @param id - the id to set for the file.
@@ -57,16 +63,7 @@ public:
      * @param other - the other File.
      * @return true if the id is equal. false, otherwise.
      */
-    bool operator ==(const FileDesc &other) const;
-
-private:
-    string path;
-
-    int id;
-
-    // the number of times we called the file.
-    int frequency;
-
+    bool operator==(const FileDesc &other) const;
 
 };
 

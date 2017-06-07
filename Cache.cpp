@@ -14,10 +14,6 @@ Cache::Cache(int bn) {
     blockNum = bn;
 }
 
-void Cache::cacheBlock(CacheBlock *block) {
-
-}
-
 CacheBlock *Cache::findBlock(string path, int blockNum) {
     CacheBlock *blockToCheck;
     for(auto it = blocks[path].begin(); it<blocks[path].end();it++){

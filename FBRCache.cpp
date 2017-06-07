@@ -10,7 +10,7 @@ oldBlocks(oldBlocks){
 }
 
 void FBRCache::cacheBlock(CacheBlock *block) {
-    if (cacheQueue.size() >= blockNum) {
+    if (cacheQueue.size() >= (unsigned int)blockNum) {
         int old = (int) ceil(cacheQueue.size()*this->oldBlocks);
         auto it = cacheQueue.end() - old;
         CacheBlock* chosenBlock = *it;

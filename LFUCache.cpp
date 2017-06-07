@@ -13,7 +13,7 @@ LFUCache::LFUCache(int blockNum): Cache(blockNum) {
 }
 
 void LFUCache::cacheBlock(CacheBlock *block) {
-    if (cacheQueue.size() >= blockNum) {
+    if (cacheQueue.size() >= (unsigned int)blockNum) {
         auto it = cacheQueue.begin();
         CacheBlock *toErase = *it;
         string fp = toErase->filePath;

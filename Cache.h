@@ -20,7 +20,7 @@ public:
     Cache(int blockNum);
     map<string, vector<CacheBlock *>> blocks;
     int blockNum;
-    virtual void cacheBlock(CacheBlock *block);
+    virtual void cacheBlock(CacheBlock *block) = 0;
     virtual CacheBlock *findBlock(string path, int blockNum);
     virtual CacheBlock *readBlock(string path, int blockNum) = 0;
     virtual string printCache() = 0;

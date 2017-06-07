@@ -15,12 +15,12 @@ void LRUCache::cacheBlock(CacheBlock *block) {
         cout << "Error!" << endl;
     }
 
-    if (cacheQueue.size() >= blockNum) {
+    if (cacheQueue.size() >= (unsigned int) blockNum) {
         CacheBlock *toErase = cacheQueue.back();
         string fp = toErase->filePath;
         int id = toErase->pos;
         cacheQueue.pop_back();
-        CacheBlock * chosenToErase = Cache::findBlock(fp, id);
+        CacheBlock *chosenToErase = Cache::findBlock(fp, id);
         auto it2 = find(blocks[fp].begin(), blocks[fp].end(), chosenToErase);
         blocks[fp].erase(it2);
     }
@@ -42,21 +42,20 @@ CacheBlock *LRUCache::readBlock(string path, int blockNum) {
 
 string LRUCache::printCache() {
     string finalOutput;
-    for(auto it = cacheQueue.begin() ; it < cacheQueue.end();it++){
-        CacheBlock * block = *it;
+    for (auto it = cacheQueue.begin(); it < cacheQueue.end(); it++) {
+        CacheBlock *block = *it;
         finalOutput += block->filePath;
-        finalOutput+=" ";
-        finalOutput+= to_string(block->pos);
-        finalOutput+="\n";
+        finalOutput += " ";
+        finalOutput += to_string(block->pos);
+        finalOutput += "\n";
     }
     return finalOutput;
 }
 
 LRUCache::~LRUCache() {
 
-        for ( int i = 0; i < cacheQueue.size(); i++ )
-        {
-            delete cacheQueue[i];
-        }
-        cacheQueue.clear();
+    for (unsigned int i = 0; i < cacheQueue.size(); i++) {
+        delete cacheQueue[i];
+    }
+    cacheQueue.clear();
 }
