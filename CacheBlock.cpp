@@ -2,6 +2,7 @@
 // Created by avishadler on 5/28/17.
 //
 
+#include <malloc.h>
 #include "CacheBlock.h"
 
 CacheBlock::CacheBlock() {
@@ -13,7 +14,7 @@ CacheBlock::CacheBlock(string filePath, int pos, char *buf, int numOfBytes) :
 }
 
 CacheBlock::~CacheBlock() {
-
+    free(buf);
 }
 
 bool CacheBlock::operator==(const CacheBlock &other) const {

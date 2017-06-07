@@ -32,8 +32,8 @@ TEST: CacheFS.a TEST.cpp
 tar: CacheFS.cpp
 	tar -cvf ex4.tar $^ Makefile README
 
-valgrind: Search
-	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./TEST e /cs/usr/gullumbroso/Desktop/ /cs/usr/gullumbroso/Desktop/OS/ex2/project
+valgrind: TEST
+	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./TEST
 
 gtest: CacheFS.a TEST.cpp
 	g++ $(CPPFLAGS) TEST.cpp -L. CacheFS.a -o gtest

@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <cstring>
+#include <malloc.h>
 
 
 #define SUCCESS 0
@@ -111,7 +112,6 @@ int CacheFS_open(const char *pathname) {
     if(path.find("/tmp")== string::npos){
         exitWithError("cannot open file");
     }
-    delete res;
     int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
     if (fd < 0) {
         exitWithError("open file is not valid.");
@@ -123,6 +123,7 @@ int CacheFS_open(const char *pathname) {
         filesMap[fd] = file;
         cache->blocks[fullPath];
     }
+    free(res);
     return fd;
 }
 
@@ -144,8 +145,7 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     }
 
     for (int i = (int) start; i < end; i++) {
-        char* curbuf = (char*)aligned_alloc(blksize,blksize);
-
+        char* curbuf;
         // Check if the block of the file exists in the cache
         CacheBlock *block = cache->readBlock(path, i);
         if (block != nullptr) {
@@ -153,8 +153,9 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
             b_read += block->numOfBytes;
             curbuf = block->buf;
         } else {
-            misses++;
             // The block isn't saved in the cache
+            misses++;
+            curbuf = (char*)aligned_alloc(blksize,blksize);
             int numOfBytes = (int) pread(file_id, curbuf, (size_t) blksize, i*(size_t)blksize);
             if (numOfBytes < 0) {
                 exitWithError("Couldn't read from a file.");
@@ -164,6 +165,7 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
                 bytes = 0;
             }
             b_read += bytes;
+            if (numOfBytes == 0) continue;
             CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, numOfBytes);
             cache->cacheBlock(blockToAdd);
         }

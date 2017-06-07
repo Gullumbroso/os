@@ -35,6 +35,7 @@ void FBRCache::cacheBlock(CacheBlock *block) {
         CacheBlock * chosenToErase = Cache::findBlock(chosenBlock->filePath, id);
         auto it2 = find(blocks[fp].begin(), blocks[fp].end(), chosenToErase);
         blocks[chosenToErase->filePath].erase(it2);
+        delete chosenToErase;
     }
     cacheQueue.insert(cacheQueue.begin(), block);
     blocks[block->filePath].push_back(block);

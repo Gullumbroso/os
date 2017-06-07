@@ -18,11 +18,10 @@ void LRUCache::cacheBlock(CacheBlock *block) {
     if (cacheQueue.size() >= (unsigned int) blockNum) {
         CacheBlock *toErase = cacheQueue.back();
         string fp = toErase->filePath;
-        int id = toErase->pos;
         cacheQueue.pop_back();
-        CacheBlock *chosenToErase = Cache::findBlock(fp, id);
-        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), chosenToErase);
+        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), toErase);
         blocks[fp].erase(it2);
+        delete toErase;
     }
     cacheQueue.insert(cacheQueue.begin(), block);
     blocks[block->filePath].push_back(block);

@@ -17,11 +17,10 @@ void LFUCache::cacheBlock(CacheBlock *block) {
         auto it = cacheQueue.begin();
         CacheBlock *toErase = *it;
         string fp = toErase->filePath;
-        int id = toErase->pos;
         cacheQueue.erase(it);
-        CacheBlock * chosenToErase = Cache::findBlock(fp, id);
-        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), chosenToErase);
+        auto it2 = find(blocks[fp].begin(), blocks[fp].end(), toErase);
         blocks[fp].erase(it2);
+        delete toErase;
     }
     cacheQueue.insert(block);
     blocks[block->filePath].push_back(block);
