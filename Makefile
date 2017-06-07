@@ -1,37 +1,46 @@
-CPPFLAGS  =-std=c++11 -Wall -Wextra -g -pthread
+CPPFLAGS  =-std=c++11 -Wall -Wextra -g
 
-all: MapReduceFramework.a Search 
+all: CacheFS.a TEST
 
-MapReduceFramework.o: MapReduceFramework.cpp MapReduceFramework.h Thread.h ExecMapThread.h ExecReduceThread.h
-	g++ $(CPPFLAGS) -c MapReduceFramework.cpp
+CacheFS.o: CacheFS.cpp CacheFS.h FileDesc.h CacheBlock.h LRUCache.h LFUCache.h FBRCache.h
+	g++ $(CPPFLAGS) -c CacheFS.cpp
+ 
+CacheFS.a: CacheFS.o FileDesc.o CacheBlock.o LRUCache.o LFUCache.o FBRCache.o Cache.o
+	ar rcs CacheFS.a CacheFS.o FileDesc.o CacheBlock.o LRUCache.o LFUCache.o FBRCache.o Cache.o
 
-MapReduceFramework.a: MapReduceFramework.o Thread.o ExecReduceThread.o ExecMapThread.o
-	ar rcs MapReduceFramework.a MapReduceFramework.o Thread.o ExecReduceThread.o ExecMapThread.o
+FileDesc.o: FileDesc.cpp FileDesc.h
+	g++ $(CPPFLAGS) -c FileDesc.cpp
 
-ExecReduceThread.o: ExecReduceThread.cpp ExecReduceThread.h MapReduceFramework.h Thread.h
-	g++ $(CPPFLAGS) -c ExecReduceThread.cpp
+LRUCache.o: LRUCache.cpp LRUCache.h Cache.h CacheBlock.h
+	g++ $(CPPFLAGS) -c LRUCache.cpp
 
-ExecMapThread.o: ExecMapThread.cpp ExecMapThread.h Thread.h
-	g++ $(CPPFLAGS) -c ExecMapThread.cpp
+LFUCache.o: LFUCache.cpp LFUCache.h Cache.h CacheBlock.h
+	g++ $(CPPFLAGS) -c LFUCache.cpp
 
-Thread.o: Thread.cpp Thread.h MapReduceClient.h
-	g++ $(CPPFLAGS) -c Thread.cpp
+FBRCache.o: FBRCache.cpp FBRCache.h Cache.h CacheBlock.h
+	g++ $(CPPFLAGS) -c FBRCache.cpp
 
-Search: MapReduceFramework.a Search.cpp
-	g++ $(CPPFLAGS) Search.cpp -L. MapReduceFramework.a -o Search
+Cache.o: Cache.cpp Cache.h
+	g++ $(CPPFLAGS) -c Cache.cpp
 
-tar: MapReduceFramework.cpp Search.cpp
-	tar -cvf ex3.tar $^ Makefile README
+CacheBlock.o: CacheBlock.cpp CacheBlock.h
+	g++ $(CPPFLAGS) -c CacheBlock.cpp
+
+TEST: CacheFS.a TEST.cpp
+	g++ $(CPPFLAGS) TEST.cpp -L. CacheFS.a -o TEST
+
+tar: CacheFS.cpp
+	tar -cvf ex4.tar $^ Makefile README
 
 valgrind: Search
-	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./Search e /cs/usr/gullumbroso/Desktop/ /cs/usr/gullumbroso/Desktop/OS/ex2/project
+	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./TEST e /cs/usr/gullumbroso/Desktop/ /cs/usr/gullumbroso/Desktop/OS/ex2/project
 
-gtest: MapReduceFramework.a test.cpp
-	g++ $(CPPFLAGS) test.cpp -L. MapReduceFramework.a -o gtest
+gtest: CacheFS.a TEST.cpp
+	g++ $(CPPFLAGS) TEST.cpp -L. CacheFS.a -o gtest
 
 gvalgrind: gtest
 	valgrind --leak-check=full --show-possibly-lost=yes --show-reachable=yes --track-origins=yes --undef-value-errors=yes ./gtest
 
 
 clean:
-	rm -f *.o *.a Search
+	rm -f *.o *.a TEST
