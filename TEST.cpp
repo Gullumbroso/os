@@ -8,6 +8,8 @@
 #include <cstring>
 #include "CacheFS.h"
 
+using namespace std;
+
 void sanityCheck()
 {
 
@@ -88,7 +90,6 @@ void sanityCheck()
     {
         std::cout << "Sanity Check Failed!\n";
     }
-    return;
 }
 
 void doubleOpenClose()
@@ -265,7 +266,6 @@ void basicLRU()
     char statsResults[10000] = "\0";
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(statsResults, 10000);
-
         if (!(!strcmp(statsResults, "Hits number: 1.\nMisses number: 6.\n") || !strcmp(statsResults, "Hits number: 1\nMisses number: 6\n")))
         {
             ok = false;
@@ -520,7 +520,7 @@ void basicFBR()
                               "/tmp/FBR1.txt 0\n/tmp/FBR1.txt 6\n/tmp/FBR1.txt 5\n/tmp/FBR1.txt 4\n/tmp/FBR1.txt 3\n"
                               "/tmp/FBR2.txt 2\n/tmp/FBR2.txt 1\n/tmp/FBR2.txt 0\n/tmp/FBR1.txt 6\n/tmp/FBR1.txt 5\n"
                               "/tmp/FBR1.txt 4\n/tmp/FBR1.txt 3\n/tmp/FBR1.txt 2\n/tmp/FBR1.txt 1\n/tmp/FBR1.txt 0\n";
-        
+
         if (strcmp(cacheResults, cacheCorrect)) {ok = false;}
     }
     resultsFileInput.close();
@@ -530,6 +530,7 @@ void basicFBR()
     char statsResults[10000] = "\0";
     if (resultsFileInput.is_open()) {
         resultsFileInput.read(statsResults, 10000);
+
 
         if (!(!strcmp(statsResults, "Hits number: 4.\nMisses number: 11.\n") || !strcmp(statsResults, "Hits number: 10\nMisses number: 15\n")))
         {
@@ -561,12 +562,12 @@ void basicFBR()
 
 int main()
 {
-//    sanityCheck();
-//    doubleOpenClose();
-//    offsetTooBig();
-//    basicLRU();
-//    basicLFU();
-//    basicFBR();
+    sanityCheck();
+    doubleOpenClose();
+    offsetTooBig();
+    basicLRU();
+    basicLFU();
+    basicFBR();
 
     return 0;
 }

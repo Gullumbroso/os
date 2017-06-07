@@ -76,6 +76,7 @@ int CacheFS_init(int blocks_num, cache_algo_t cache_algo, double f_old, double f
 
 int CacheFS_destroy() {
     delete cache;
+    filesMap.clear();
     destroy = true;
     return SUCCESS;
 }
@@ -101,16 +102,17 @@ int CacheFS_destroy() {
 			   "/tmp" due to the use of NFS in the Aquarium.
  */
 int CacheFS_open(const char *pathname) {
-    char *fullPath;
-    char *res = realpath(pathname, fullPath);
+    char *res = realpath(pathname, NULL);
     if (!res) {
         exitWithError("can not get full path");
     }
+    string fullPath = string(res);
     string path = string(fullPath);
     if(path.find("/tmp")== string::npos){
         exitWithError("cannot open file");
     }
-    int fd = open(fullPath, O_RDONLY | O_DIRECT | O_SYNC);
+    delete res;
+    int fd = open(pathname, O_RDONLY | O_DIRECT | O_SYNC);
     if (fd < 0) {
         exitWithError("open file is not valid.");
     }
@@ -157,7 +159,11 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
             if (numOfBytes < 0) {
                 exitWithError("Couldn't read from a file.");
             }
-            b_read += numOfBytes;
+            int bytes = numOfBytes - (int) (offset%blksize);
+            if(bytes < 0){
+                bytes = 0;
+            }
+            b_read += bytes;
             CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, numOfBytes);
             cache->cacheBlock(blockToAdd);
         }
@@ -189,7 +195,7 @@ int CacheFS_print_stat (const char *log_path){
     if(file.fail()){
         exitWithError("can not open file");
     }
-    file<<"Hits number: " << to_string(hits) << endl <<"Misses number: " << to_string(misses) << endl;
+    file << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
     file.close();
     return SUCCESS;
 }

@@ -8,7 +8,7 @@ inline bool fncomp (CacheBlock *lcb, CacheBlock *rcb) {return lcb->references < 
 
 LFUCache::LFUCache(int blockNum): Cache(blockNum) {
     bool(*fn_pt)(CacheBlock *,CacheBlock *) = fncomp;
-    std::set<CacheBlock *,bool(*)(CacheBlock *,CacheBlock *)> cq(fn_pt);
+    std::multiset<CacheBlock *,bool(*)(CacheBlock *,CacheBlock *)> cq(fn_pt);
     cacheQueue = cq;
 }
 
@@ -43,7 +43,7 @@ string LFUCache::printCache() {
             CacheBlock * block = *it;
             finalOutput += block->filePath;
             finalOutput+=" ";
-            finalOutput+= block->pos;
+            finalOutput+= to_string(block->pos);
             finalOutput+="\n";
         }
         return finalOutput;

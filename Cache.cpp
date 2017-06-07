@@ -30,5 +30,5 @@ CacheBlock *Cache::findBlock(string path, int blockNum) {
 }
 
 Cache::~Cache() {
-
+    blocks.clear();
 }

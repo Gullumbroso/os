@@ -53,8 +53,10 @@ string LRUCache::printCache() {
 }
 
 LRUCache::~LRUCache() {
-    for (auto it = cacheQueue.begin(); it < cacheQueue.end(); it++) {
-        CacheBlock *block = *it;
-        delete block;
-    }
+
+        for ( int i = 0; i < cacheQueue.size(); i++ )
+        {
+            delete cacheQueue[i];
+        }
+        cacheQueue.clear();
 }
