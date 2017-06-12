@@ -134,6 +134,9 @@ int CacheFS_open(const char *pathname) {
 }
 
 int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
+    if(count == 0){
+        return 0;
+    }
     auto it = filesMap.find(file_id);
     if (it == filesMap.end()) {
         return FAILURE;
@@ -207,7 +210,7 @@ int CacheFS_print_stat (const char *log_path){
     if(file.fail()){
         return FAILURE;
     }
-    cout << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
+//    cout << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
     file << "Hits number: " << to_string(hits) << "." << endl <<"Misses number: " << to_string(misses) << "." << endl;
     file.close();
     return SUCCESS;

@@ -34,7 +34,8 @@ void sanityCheck()
     CacheFS_init(10, LRU, 0.1, 0.1);
     int fd = CacheFS_open("/tmp/sanity_test.txt");
 
-    char data[11] = "\0";
+    char data[40960] = "\0";
+
     CacheFS_pread(fd, &data, 10, 0); // read from beginning of block
     if (strcmp(data, "TEST TEST ")) {ok = false;}
     CacheFS_pread(fd, &data, 10, 5*blockSize + 1); // read from middle of block
@@ -674,7 +675,7 @@ void stressTest()
     int fd1 = CacheFS_open("/tmp/Several1.txt");
     int fd2 = CacheFS_open("/tmp/Several2.txt");
 
-    char data[10*blockSize] = {0};
+    char data[10*blockSize] = "\0";
     for (int i = 0; i<10000; i++)
     {
         CacheFS_pread(fd1, &data, 6*blockSize, 0*blockSize); // read 6 blocks again and again

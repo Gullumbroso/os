@@ -48,6 +48,7 @@ string LRUCache::printCache() {
         finalOutput += to_string(block->pos);
         finalOutput += "\n";
     }
+
     return finalOutput;
 }
 
