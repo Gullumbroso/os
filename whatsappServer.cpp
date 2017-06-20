@@ -57,6 +57,7 @@ int whatsappServer::runServer()
     while(true) {
         FD_ZERO(&sockets);
         FD_SET(STDIN_FILENO, &sockets);
+
         int ready = select(MAX_PEND, &readfds, NULL, NULL, timer);
         for (auto mapping : userToSocket) {
             int socket = mapping.second;
