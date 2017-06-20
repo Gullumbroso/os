@@ -28,6 +28,10 @@ using namespace std;
 class whatsappClient
 {
 
+    string username;
+
+    int socketAtServer;
+
     void exitWithError(string msg);
 
     int callSocket(char *hostname, unsigned short portnum);

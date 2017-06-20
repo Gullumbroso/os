@@ -19,12 +19,16 @@
 #include <sstream>
 #include <libltdl/lt_system.h>
 #include <vector>
+#include <map>
 #include <string>
+
+using namespace std;
 
 
 class whatsappServer
 {
     int serverSocket;
+    map<string, int> userToSocket;
 
     whatsappServer(char* port);
 

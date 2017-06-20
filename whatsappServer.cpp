@@ -9,7 +9,6 @@
 #define FAILURE 1
 #define MAX_PEND 10
 
-
 using namespace std;
 
 
@@ -54,11 +53,15 @@ int whatsappServer::getConnection()
 
 int whatsappServer::runServer()
 {
-    fd_set readfds;
+    fd_set sockets;
     while(true) {
-        FD_ZERO(&readfds);
-        FD_SET(STDIN_FILENO, &readfds);
+        FD_ZERO(&sockets);
+        FD_SET(STDIN_FILENO, &sockets);
         int ready = select(MAX_PEND, &readfds, NULL, NULL, timer);
-    }
+        for (auto mapping : userToSocket) {
+            int socket = mapping.second;
+            FD_SET(socket, &sockets);
 
+        }
+    }
 }
