@@ -32,6 +32,8 @@ void whatsappClient::initConnection(char* name, char* address, char* port) {
         cerr << ERR_MSG << "socket " << errno << endl;
         exit(EXIT_FAILURE);
     }
+
+
     if(connect(sfd, (struct sockaddr *) &addr, sizeof(struct sockaddr)) < 0) {
         close(sfd);
         cerr << ERR_MSG << "connect " << errno << endl;
@@ -139,7 +141,8 @@ void whatsappClient::readUserInput() {
     * a helper function that handles the flow of a client exiting the server
     */
 void whatsappClient::exitClient(){
-    sendMsgToServer("exit\n");
+    string msg = "exit\n";
+    write(socketFd, msg.c_str(), msg.length());
     readServerInput();
     close(socketFd);
     exit(0);

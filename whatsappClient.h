@@ -5,20 +5,19 @@
 #ifndef UNTITLED1_WHATSAPPCLIENT_H
 #define UNTITLED1_WHATSAPPCLIENT_H
 
-#include <netinet/in.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include "whatsappClient.h"
+#include <netinet/in.h>
+#include <cstring>
+#include <arpa/inet.h>
+#include <zconf.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <iostream>
 #include <unistd.h>
 #include <cstring>
-#include <algorithm>
-#include <iostream>
-#include <sstream>
+#include <stdlib.h>
 #include <libltdl/lt_system.h>
-#include <vector>
-#include <string>
 
 #define ERR_MSG "ERROR: "
 #define FAILURE 1
@@ -27,16 +26,24 @@ using namespace std;
 
 class whatsappClient
 {
+public:
+    whatsappClient(char* name, char* address, char* port);
+
+    int clientSocket;
 
     string username;
 
-    int socketAtServer;
-
-    void exitWithError(string msg);
+    void exitWithError(string msg, bool isCerr, int sfd);
 
     int callSocket(char *hostname, unsigned short portnum);
 
-    int readData(int s, char *buf, int n);
+    void sendUserInput();
+
+    void readServerInput();
+
+    void runClient();
+
+    void initializeConnection(const char *name, const char *address, const char *port);
 };
 
 
