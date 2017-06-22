@@ -27,14 +27,17 @@ using namespace std;
 
 class whatsappServer
 {
+public:
     int serverSocket;
     map<string, int> userToSocket;
 
     whatsappServer(char* port);
 
+    void clearResources();
+
     void exitWithError(string msg);
 
-    int getConnection();
+    int connectNewClient();
 
     int runServer();
 };
