@@ -109,6 +109,7 @@ void whatsappClient::runClient() {
             exitWithError("select",true,clientSocket);
         }
 
+        // check where
         if (FD_ISSET(STDIN_FILENO, &readFdSocked)) {
             //check if user input is valid.
             sendUserInput();
@@ -119,7 +120,6 @@ void whatsappClient::runClient() {
         }
     }
 }
-
 void whatsappClient::readServerInput() {
     char msg[CHARS_SIZE];
     ssize_t bytes_read = read(clientSocket, msg, CHARS_SIZE);
@@ -131,47 +131,24 @@ void whatsappClient::sendUserInput() {
     ssize_t bytes_read = read(STDIN_FILENO, message, CHARS_SIZE);
     message[bytes_read] = '\0';
     string msg = (string) message;
+    unsigned long firstSpace = msg.find(" ", 0);
+    unsigned long secondSpace = msg.find(" ", firstSpace + 1);
     if (msg.find("create_group") == 0){
-        unsigned long firstSpace = msg.find(" ", 0);
-        unsigned long secondSpace = msg.find(" ", firstSpace + 1);
-
-        if(secondSpace == string::npos){
-            // checking for enough arguments
-            cerr << ERR_MSG << "Invalid input." << endl;
-            return;
-        }
-        unsigned long groupNameLen = secondSpace - (firstSpace + 1);
-        string groupName = msg.substr(firstSpace + 1, groupNameLen); //finding the group's name
-        if(!regex_match(groupName, validName)){
-            cerr << ERR_MSG << "Invalid input." << endl;
+        if(!checkValidGroup(msg, firstSpace, secondSpace)){
             return;
         }
     }
     else if (msg.find("send") == 0){
-        unsigned long firstSpace = msg.find(" ", 0);
-        unsigned long secondSpace = msg.find(" ", firstSpace + 1);
-
-        if(secondSpace == string::npos){
-            // checking for enough arguments
-            cerr << ERR_MSG << "Invalid input." << endl;
-        }
-        unsigned long nameLen = secondSpace - (firstSpace + 1);
-        string name = msg.substr(firstSpace + 1, nameLen); //finding the group's name
-        if(!regex_match(name, validName)){
-            //chekcing if the group's name is valid
-            cerr << ERR_MSG << "Invalid input." << endl;
-        }
+        checkSend(msg, firstSpace, secondSpace);
     }
 
     else if(msg.find("who") == 0){
-        if (msg.size() > 4){
-            cerr << ERR_MSG << "Invalid input." << endl;
+        if(!checkWho(msg)){
             return;
         }
     }
     else if(msg.find("exit") == 0){
-        if (msg.size() > 5){
-            cerr << ERR_MSG << "Invalid input." << endl;
+        if(!checkExit(msg)){
             return;
         }
         string msg2 = "exit\n";
@@ -186,6 +163,52 @@ void whatsappClient::sendUserInput() {
         return;
     }
     write(clientSocket, ((string) message).c_str(), ((string) message).length());
+}
+
+bool whatsappClient::checkExit(const string &msg) const {
+    if (msg.size() > 5){
+        cerr << ERR_MSG << "Invalid input." << endl;
+        return false;
+    }
+    return true;
+}
+
+bool whatsappClient::checkWho(const string &msg) const {
+    if (msg.size() > 4){
+        cerr << ERR_MSG << "Invalid input." << endl;
+        return false;
+        }
+    return true;
+}
+
+void whatsappClient::checkSend(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const {
+    if(secondSpace == basic_string::npos){
+            // checking for enough arguments
+        cerr << ERR_MSG << "Invalid input." << endl;
+        return;
+        }
+    unsigned long nameLen = secondSpace - (firstSpace + 1);
+    string name = msg.substr(firstSpace + 1, nameLen); //finding the group's name
+    if(!regex_match(name, validName)){
+            //chekcing if the group's name is valid
+        cerr << ERR_MSG << "Invalid input." << endl;
+        return;
+        }
+}
+
+bool whatsappClient::checkValidGroup(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const {
+    if(secondSpace == basic_string::npos){
+            // not valid arguments.
+        cerr << ERR_MSG << "Invalid input." << endl;
+        return false;
+        }
+    unsigned long groupNameLen = secondSpace - (firstSpace + 1);
+    string groupName = msg.substr(firstSpace + 1, groupNameLen); //finding the group's name
+    if(!regex_match(groupName, validName)){
+            cerr << ERR_MSG << "Invalid input." << endl;
+        return false;
+        }
+    return true;
 }
 
 /**

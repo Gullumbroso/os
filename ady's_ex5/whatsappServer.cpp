@@ -68,6 +68,7 @@ void whatsappServer::loop(){
         timeval timer;
         timer.tv_sec = 1;
         timer.tv_usec = 0;
+
         int returnVal = select(FD_SETSIZE, &readfds, NULL, NULL, &timer);
         if(returnVal < 0){
             cerr << ERR_MSG << "select " << errno << endl;

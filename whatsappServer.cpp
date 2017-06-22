@@ -7,8 +7,10 @@
 
 #define ERR_MSG "ERROR: "
 #define FAILURE 1
+#define SUCCESS 0
 #define MAX_PEND 10
 #define MSG_SIZE 256
+#define PORT 1
 
 using namespace std;
 
@@ -28,13 +30,15 @@ whatsappServer::whatsappServer(char* port)
     sa.sin_addr.s_addr = htonl(INADDR_ANY);
 
     //second step
-    int returnVal = bind(serverSocket, (sockaddr*)&sa, sizeof(sa));
-    if (returnVal < 0){
-        cerr << ERR_MSG << "bind " << errno << endl;
-        exit(FAILURE);
+    int res = bind(serverSocket, (sockaddr*)&sa, sizeof(sa));
+    if (res < 0){
+        exitWithError("bind");
     }
 
-    listen(serverSocket, MAX_PEND);
+    res = listen(serverSocket, MAX_PEND);
+    if(res < 0){
+        exitWithError("listen");
+    }
 }
 
 
@@ -109,9 +113,7 @@ int whatsappServer::connectNewClient()
 int whatsappServer::runServer()
 {
     fd_set sockets;
-
     while(true) {
-
         FD_ZERO(&sockets);
         FD_SET(serverSocket, &sockets);
         FD_SET(STDIN_FILENO, &sockets);
@@ -123,18 +125,35 @@ int whatsappServer::runServer()
         timer.tv_sec = 1;
         timer.tv_usec = 0;
 
-        int ready = select(MAX_PEND + 1, &sockets, NULL, NULL, &timer);
-
+        int ready = select(FD_SETSIZE, &sockets, NULL, NULL, &timer);
         if (ready < 0) {
+            for (auto mapping : userToSocket){
+                close(mapping.second);
+            }
+            close(serverSocket);
             exitWithError("select");
-        } else {
-            // Check for ready sockets
-            for (auto mapping : userToSocket) {
-                int socket = mapping.second;
-                if (FD_ISSET(socket, &sockets)) {
-                    handleClientRequest();
+
+            if (FD_ISSET(STDIN_FILENO, &sockets)){
+                string input;
+                getline(cin, input);
+                transform(input.begin(), input.end(), input.begin(), ::tolower);
+                if (input.compare("exit") == 0){
+                    for (auto pair : usernameToFd){
+                        close(pair.second);
+                    }
+                    close(serverFd);
+                    exit(0);
                 }
             }
+
+//        } else {
+//            // Check for ready sockets
+//            for (auto mapping : userToSocket) {
+//                int socket = mapping.second;
+//                if (FD_ISSET(socket, &sockets)) {
+//                    handleClientRequest();
+//                }
+//            }
             if (FD_ISSET(serverSocket, &sockets)) {
                 // There is a request for new connection
                 connectNewClient();
@@ -143,4 +162,15 @@ int whatsappServer::runServer()
             }
         }
     }
+}
+
+
+int main(int argc, char** argv) {
+    if (argc != 2) {
+        cout << "Usage: whatsappServer portNum" << endl;
+        exit(FAILURE);
+    }
+    whatsappServer s = whatsappServer(argv[PORT]);
+    s.runServer();
+    exit(SUCCESS);
 }

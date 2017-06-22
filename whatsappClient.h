@@ -35,8 +35,6 @@ public:
 
     void exitWithError(string msg, bool isCerr, int sfd);
 
-    int callSocket(char *hostname, unsigned short portnum);
-
     void sendUserInput();
 
     void readServerInput();
@@ -44,6 +42,14 @@ public:
     void runClient();
 
     void initializeConnection(const char *name, const char *address, const char *port);
+
+    bool checkValidGroup(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const;
+
+    void checkSend(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const;
+
+    bool checkWho(const string &msg) const;
+
+    bool checkExit(const string &msg) const;
 };
 
 
