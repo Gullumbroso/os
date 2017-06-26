@@ -2,6 +2,7 @@
 // Created by Gilad Lumbroso on 06/20/2017.
 //
 
+#include <stdlib.h>
 #include "whatsappServer.h"
 
 
@@ -18,7 +19,11 @@
 
 using namespace std;
 
-
+/**
+ * the main constructor of the whatsappServer
+ * @param port - the port we use.
+ * @return
+ */
 whatsappServer::whatsappServer(char *port) {
     //first step
     int portNumber = stoi(port);
@@ -44,7 +49,9 @@ whatsappServer::whatsappServer(char *port) {
     }
 }
 
-
+/**
+ * clears all the resources.
+ */
 void whatsappServer::clearResources() {
     for (auto mapping : userToSocket) {
         close(mapping.second);
@@ -52,7 +59,12 @@ void whatsappServer::clearResources() {
     close(serverSocket);
 }
 
-
+/**
+ * function that help us to exit the connection well.
+ * @param msg - the message we recieve to print to cerr.
+ * @param fd - the fd of the socket.
+ * @param toClose - if there is need to close the socket of the client.
+ */
 void whatsappServer::exitWithError(string msg, int fd, bool toClose) {
     clearResources();
     cerr << ERR_MSG << msg << " " << errno << endl;
@@ -62,6 +74,9 @@ void whatsappServer::exitWithError(string msg, int fd, bool toClose) {
     exit(FAILURE);
 }
 
+/**
+ * try to open new connection.
+ */
 void whatsappServer::connection() {
     char message[MSG_SIZE];
     int newConnection;
@@ -82,6 +97,12 @@ void whatsappServer::connection() {
     close(newConnection);
 }
 
+
+/**
+ * checks if the new socket is already in the set, if not - add.
+ * @param message - the message we got for connection.
+ * @param newConnection - the fd of the new connection
+ */
 void whatsappServer::tryToConnect(char *message, int newConnection) {
     ssize_t bytes_read = read(newConnection, message, MSG_SIZE);
     message[bytes_read] = '\0';
@@ -99,9 +120,9 @@ void whatsappServer::tryToConnect(char *message, int newConnection) {
 }
 
 /**
- * init the connection of the server.
- * @param newConnection - the
- * @param fds
+ * init new connection of the server.
+ * @param newConnection - the new connection
+ * @param fds - fd of the socket.
  * @return
  */
 int whatsappServer::initConnection(int &newConnection, fd_set &fds) const {
@@ -164,6 +185,9 @@ void whatsappServer::runServer() {
     }
 }
 
+/**
+ * print the message and the information on it.
+ */
 void whatsappServer::printSituation(string msg, string msg2) {
     cout << msg << msg2 << endl;
 }
@@ -224,7 +248,7 @@ void whatsappServer::checkConnections(string user, int fd) {
  */
 void whatsappServer::clientExit(string user, int fd) {
     //check if the user in groups.
-    for (auto it = groupUsernames.begin(); it != groupUsernames.end(); ++it) {
+    for (auto it = groupUserNames.begin(); it != groupUserNames.end(); ++it) {
         vector<string> groupUsers = it->second;
         vector<string>::iterator thisUserIter = find(groupUsers.begin(), groupUsers.end(), user);
         // is user in the group?
@@ -252,7 +276,7 @@ void whatsappServer::group(string user, int fd, string msg) {
     string nameOfGroup = msg.substr(space1 + 1, stringLength);
 
     if (!(userToSocket.find(nameOfGroup) != userToSocket.end() ||
-          groupUsernames.find(nameOfGroup) != groupUsernames.end())) {
+          groupUserNames.find(nameOfGroup) != groupUserNames.end())) {
         createGroup(user, fd, msg, space2, nameOfGroup);
     } else {
         // can not create group
@@ -308,12 +332,13 @@ void whatsappServer::createGroup(string &user, int fd, const string &msg, size_t
         write(fd, msgToClient.c_str(), msgToClient.length());
     } else {
         //adding group and clients to our map.
-        groupUsernames[nameOfGroup] = clientsNames;
+        groupUserNames[nameOfGroup] = clientsNames;
         string msgToClient = "Group \"" + nameOfGroup + "\" was created successfully.";
         printSituation(user, PRIME + msgToClient);
         write(fd, msgToClient.c_str(), msgToClient.length());
     }
 }
+
 /**
  * if we decided that the server should send a message
  * @param user - the user who sent the message
@@ -344,8 +369,8 @@ void whatsappServer::sendMessage(string user, int fd, string msg) {
 
     }
         //checks if its a group with the given name
-    else if (groupUsernames.find(name) != groupUsernames.end()) {
-        vector<string> groupMembers = groupUsernames[name];
+    else if (groupUserNames.find(name) != groupUserNames.end()) {
+        vector<string> groupMembers = groupUserNames[name];
         //checks if the user is in this group
         if (find(groupMembers.begin(), groupMembers.end(), user) != groupMembers.end()) {
             for (unsigned int i = 0; i < groupMembers.size(); i++) {
