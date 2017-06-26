@@ -43,9 +43,9 @@ public:
 
     void initializeConnection(const char *name, const char *address, const char *port);
 
-    bool checkValidGroup(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const;
+    bool checkValidGroup(const string &msg, unsigned long space1, unsigned long space2) const;
 
-    void checkSend(const string &msg, unsigned long firstSpace, unsigned long secondSpace) const;
+    void checkSend(const string &msg, unsigned long space1, unsigned long space2) const;
 
     bool checkWho(const string &msg) const;
 

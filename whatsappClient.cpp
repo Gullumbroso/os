@@ -15,7 +15,12 @@
 
 const regex validName("[a-zA-Z0-9]+");
 
-
+/**
+ * function that help us to exit the program + cerr output.
+ * @param msg - the msg to write.
+ * @param isCerr - cerr or cout
+ * @param socket - the socket to close
+ */
 void whatsappClient::exitWithError(string msg, bool isCerr, int socket) {
     if (isCerr) {
         cerr << ERR_MSG << msg << " " << errno << endl;
@@ -27,11 +32,23 @@ void whatsappClient::exitWithError(string msg, bool isCerr, int socket) {
     }
     exit(FAILURE);
 }
-
+/**
+ * the main constructor of the whatsappClient
+ * @param name - the name of the client
+ * @param address - the adress of the client
+ * @param port - the port.
+ * @return
+ */
 whatsappClient::whatsappClient(char *name, char *address, char *port) {
     initializeConnection(name, address, port);
 }
 
+/**
+ * the initialization process of the connection.
+ * @param name - the name of the client
+ * @param address - the adress of the client
+ * @param port - the port.
+ */
 void whatsappClient::initializeConnection(const char *name, const char *address,
                                           const char *port) {// initializations
     int socketFileDes = 0;
@@ -76,24 +93,25 @@ void whatsappClient::initializeConnection(const char *name, const char *address,
     }
 
     write(socketFileDes, name, strlen(name));
-    char message[CHARS_SIZE];
-    ssize_t bytes_read = read(socketFileDes, message, CHARS_SIZE);
+    char msg1[CHARS_SIZE];
+    ssize_t bytes_read = read(socketFileDes, msg1, CHARS_SIZE);
+    msg1[bytes_read-1] = '\0';
     if (bytes_read < 0) {
         exitWithError("read ", true, socketFileDes);
     }
 
-    if (string(message) == "Client name is already in use.") {
-        exitWithError(message, false, socketFileDes);
+    if (string(msg1) == "Client name is already in use.") {
+        exitWithError(msg1, false, socketFileDes);
     }
-    if (string(message) == "Failed to connect the server") {
-        exitWithError(message, false, socketFileDes);
+    if (string(msg1) == "Failed to connect the server") {
+        exitWithError(msg1, false, socketFileDes);
     }
     clientSocket = socketFileDes;
     cout << "Connected Successfully.\n";
 }
 
 /**
- * the loop of the client. after we initialize the connection we run it.
+ * the loop of the client, right after we initialize the connection
  */
 void whatsappClient::runClient() {
     while (true) {
@@ -123,34 +141,41 @@ void whatsappClient::runClient() {
     }
 }
 
+/**
+ * reads the server input.
+ */
 void whatsappClient::readServerInput() {
     char msg[CHARS_SIZE];
     ssize_t bytes_read = read(clientSocket, msg, CHARS_SIZE);
+    msg[bytes_read-1] = '\0';
     if (bytes_read < 0) {
         exitWithError("read ", true, clientSocket);
     }
     cout << msg << endl;
 }
 
+/**
+ * sends the input of the user. in case of errorrs - return.
+ */
 void whatsappClient::sendUserInput() {
-    char message[CHARS_SIZE];
-    ssize_t bytes_read = read(STDIN_FILENO, message, CHARS_SIZE);
-    message[bytes_read] = '\0';
-    string msg = (string) message;
-    unsigned long firstSpace = msg.find(" ", 0);
-    unsigned long secondSpace = msg.find(" ", firstSpace + 1);
-    if (msg.find("create_group") == 0) {
-        if (!checkValidGroup(msg, firstSpace, secondSpace)) {
+    char msg[CHARS_SIZE];
+    ssize_t bytes_read = read(STDIN_FILENO, msg, CHARS_SIZE);
+    msg[bytes_read] = '\0';
+    string msg1 = (string) msg;
+    unsigned long firstSpace = msg1.find(" ", 0);
+    unsigned long secondSpace = msg1.find(" ", firstSpace + 1);
+    if (msg1.find("create_group") == 0) {
+        if (!checkValidGroup(msg1, firstSpace, secondSpace)) {
             return;
         }
-    } else if (msg.find("send") == 0) {
-        checkSend(msg, firstSpace, secondSpace);
-    } else if (msg.find("who") == 0) {
-        if (!checkWho(msg)) {
+    } else if (msg1.find("send") == 0) {
+        checkSend(msg1, firstSpace, secondSpace);
+    } else if (msg1.find("who") == 0) {
+        if (!checkWho(msg1)) {
             return;
         }
-    } else if (msg.find("exit") == 0) {
-        if (!checkExit(msg)) {
+    } else if (msg1.find("exit") == 0) {
+        if (!checkExit(msg1)) {
             return;
         }
         string msg2 = "exit\n";
@@ -158,14 +183,19 @@ void whatsappClient::sendUserInput() {
         readServerInput();
         close(clientSocket);
         exit(0);
-    } else if (msg.find("create_group") != 0 && msg.find("send") != 0 &&
-               msg.find("who") != 0 && msg.find("exit") != 0) {
+    } else if (msg1.find("create_group") != 0 && msg1.find("send") != 0 &&
+               msg1.find("who") != 0 && msg1.find("exit") != 0) {
         cerr << ERR_MSG << "Invalid input." << endl;
         return;
     }
-    write(clientSocket, ((string) message).c_str(), ((string) message).length());
+    write(clientSocket, ((string) msg).c_str(), ((string) msg).length());
 }
 
+/**
+ * check if the exit is valid.
+ * @param msg - the msg to check.
+ * @return  true if it valid , false otherwise.
+ */
 bool whatsappClient::checkExit(const string &msg) const {
     if (msg.size() > 5) {
         cerr << ERR_MSG << "Invalid input." << endl;
@@ -174,23 +204,34 @@ bool whatsappClient::checkExit(const string &msg) const {
     return true;
 }
 
+/**
+ * checks if the who string is valid.
+ * @param msg - the msg we got from the client.
+ * @return
+ */
 bool whatsappClient::checkWho(const string &msg) const {
     if (msg.size() > 4) {
-        cerr << ERR_MSG << "Invalid input." << endl;
+        cerr << ERR_MSG << "failed to receive list of connected clients." << endl;
         return false;
     }
     return true;
 }
 
-void whatsappClient::checkSend(const string &msg, unsigned long firstSpace,
-                               unsigned long secondSpace) const {
-    if (secondSpace == string::npos) {
+/**
+ * check if there is a problem with sending the message to server.
+ * @param msg - the message we want to send.
+ * @param space1 - the first space in the string
+ * @param space2 - the second space in the string
+ */
+void whatsappClient::checkSend(const string &msg, unsigned long space1,
+                               unsigned long space2) const {
+    if (space2 == string::npos) {
         // checking for enough arguments
-        cerr << ERR_MSG << "Invalid input." << endl;
+        cerr << ERR_MSG << "failed to send." << endl;
         return;
     }
-    unsigned long nameLen = secondSpace - (firstSpace + 1);
-    string name = msg.substr(firstSpace + 1, nameLen); //finding the group's name
+    unsigned long nameLen = space2 - (space1 + 1);
+    string name = msg.substr(space1 + 1, nameLen); //finding the group's name
     if (!regex_match(name, validName)) {
         //chekcing if the group's name is valid
         cerr << ERR_MSG << "Invalid input." << endl;
@@ -198,15 +239,22 @@ void whatsappClient::checkSend(const string &msg, unsigned long firstSpace,
     }
 }
 
-bool whatsappClient::checkValidGroup(const string &msg, unsigned long firstSpace,
-                                     unsigned long secondSpace) const {
-    if (secondSpace == string::npos) {
+/**
+ * checks if the create group process is valid
+ * @param msg - the msg we recieved from the client
+ * @param space1
+ * @param space2
+ * @return true if it valid, false otherwise.
+ */
+bool whatsappClient::checkValidGroup(const string &msg, unsigned long space1,
+                                     unsigned long space2) const {
+    if (space2 == string::npos) {
         // not valid arguments.
         cerr << ERR_MSG << "Invalid input." << endl;
         return false;
     }
-    unsigned long groupNameLen = secondSpace - (firstSpace + 1);
-    string groupName = msg.substr(firstSpace + 1, groupNameLen); //finding the group's name
+    unsigned long groupNameLen = space2 - (space1 + 1);
+    string groupName = msg.substr(space1 + 1, groupNameLen); //finding the group's name
     if (!regex_match(groupName, validName)) {
         cerr << ERR_MSG << "Invalid input." << endl;
         return false;

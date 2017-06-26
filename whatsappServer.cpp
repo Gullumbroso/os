@@ -98,6 +98,12 @@ void whatsappServer::tryToConnect(char *message, int newConnection) {
     }
 }
 
+/**
+ * init the connection of the server.
+ * @param newConnection - the
+ * @param fds
+ * @return
+ */
 int whatsappServer::initConnection(int &newConnection, fd_set &fds) const {
     newConnection = accept(serverSocket, NULL, NULL);
     FD_ZERO(&fds);
@@ -108,7 +114,11 @@ int whatsappServer::initConnection(int &newConnection, fd_set &fds) const {
     return select(FD_SETSIZE, &fds, NULL, NULL, &timer);
 }
 
-int whatsappServer::runServer() {
+/**
+ * loop of the server. try to recieve and send messages and treat them.
+ * @return
+ */
+void whatsappServer::runServer() {
 
     fd_set sockets;
 
@@ -158,6 +168,11 @@ void whatsappServer::printSituation(string msg, string msg2) {
     cout << msg << msg2 << endl;
 }
 
+/**
+ * parser of the command we got from the client.
+ * @param userName - the client who wrote the command.
+ * @param fd - the file descriptor of the socket.
+ */
 void whatsappServer::commandParser(string userName, int fd) {
     char message[MSG_SIZE];
     ssize_t bytes_read = read(fd, message, 256);
@@ -175,6 +190,11 @@ void whatsappServer::commandParser(string userName, int fd) {
     }
 }
 
+/**
+ * checks the connections we have. in case the client wrote "who"
+ * @param user - the user who want to check.
+ * @param fd - the fd of the socket.
+ */
 void whatsappServer::checkConnections(string user, int fd) {
     vector<string> connected;
     // if not empty
@@ -197,6 +217,11 @@ void whatsappServer::checkConnections(string user, int fd) {
     }
 }
 
+/**
+ * in case the client send message to exit from the whatsappServer
+ * @param user - the user who wants to disconnect.
+ * @param fd - file descriptor of the socket.
+ */
 void whatsappServer::clientExit(string user, int fd) {
     //check if the user in groups.
     for (auto it = groupUsernames.begin(); it != groupUsernames.end(); ++it) {
@@ -214,6 +239,12 @@ void whatsappServer::clientExit(string user, int fd) {
     printSituation(user, ": Unregistered successfully.");
 }
 
+/**
+ * when we decided that group is the current operation
+ * @param user - the user who want to do that operation
+ * @param fd - the fd of the socket.
+ * @param msg - the message that the server got.
+ */
 void whatsappServer::group(string user, int fd, string msg) {
     size_t space1 = msg.find(" ", 0);
     size_t space2 = msg.find(" ", space1 + 1);
@@ -232,6 +263,14 @@ void whatsappServer::group(string user, int fd, string msg) {
     }
 }
 
+/**
+ * in case a user want to create group.
+ * @param user - the user who want to create the group.
+ * @param fd - the fd of the socket.
+ * @param msg - the msg we got from the user.
+ * @param space2 - the second space in the msg.
+ * @param nameOfGroup - the name of the group we want to open.
+ */
 void whatsappServer::createGroup(string &user, int fd, const string &msg, size_t space2,
                                  const string &nameOfGroup) {
     vector<string> clientsNames;
@@ -275,7 +314,12 @@ void whatsappServer::createGroup(string &user, int fd, const string &msg, size_t
         write(fd, msgToClient.c_str(), msgToClient.length());
     }
 }
-
+/**
+ * if we decided that the server should send a message
+ * @param user - the user who sent the message
+ * @param fd - the fd of the socket
+ * @param msg - the message
+ */
 void whatsappServer::sendMessage(string user, int fd, string msg) {
 
     size_t space1 = msg.find(" ", 0);
@@ -294,10 +338,9 @@ void whatsappServer::sendMessage(string user, int fd, string msg) {
     if ((userToSocket.find(name) != userToSocket.end()) && (name != user)) {
         int nameFd = userToSocket[name];
         write(nameFd, msgToSend.c_str(), msgToSend.length());
-        cout << user << ": \"" << clientsMsg << "\" was sent successfully to " << name << "."
-             << endl;
+        cout << user << ": \"" << clientsMsg << "\" was sent successfully to " << name << "." << endl;
         string msgTo = "Sent successfully.\n";
-        write(fd, msgTo.c_str(), msgTo.length() + 1);
+        write(fd, msgTo.c_str(), msgTo.length());
 
     }
         //checks if its a group with the given name
@@ -308,19 +351,19 @@ void whatsappServer::sendMessage(string user, int fd, string msg) {
             for (unsigned int i = 0; i < groupMembers.size(); i++) {
                 int nameFd = userToSocket[groupMembers[i]];
                 if (nameFd != fd) {
-                    write(nameFd, msgToSend.c_str(), msgToSend.length() + 1);
+                    write(nameFd, msgToSend.c_str(), msgToSend.length());
                 }
             }
             string msg3 = ": \"" + clientsMsg + "\" was sent successfully to " + name + ".";
             printSituation(user, msg3);
-            msg3 = "Sent successfully.\n";
-            write(fd, msg3.c_str(), msg3.length());
+            string msg4 = "Sent successfully.\n";
+            write(fd, msg4.c_str(), msg4.length());
         } else { //the user isn't in this group
             string msg3 = "ERROR: failed to send";
             string toCout = PRIME + msg3 + " \"" + clientsMsg + "\" to " + name + ".";
             printSituation(user, toCout);
             string toWrite = msg3 + STR_END;
-            write(fd, toWrite.c_str(), toWrite.length() + 1);
+            write(fd, toWrite.c_str(), toWrite.length());
         }
     }
         // there is no group or user with the name.
@@ -329,18 +372,31 @@ void whatsappServer::sendMessage(string user, int fd, string msg) {
         string toCout = PRIME + base + " \"" + clientsMsg + "\" to " + name + ".";
         printSituation(user, toCout);
         string toWrite = base + STR_END;
-        write(fd, toWrite.c_str(), toWrite.length() + 1);
+        write(fd, toWrite.c_str(), toWrite.length());
     }
 }
 
+/**
+ * in case we send a message to ourselve.
+ * @param user - the user who send the message
+ * @param fd - file descriptor of the socket.
+ * @param name - the name of the user we want to send to.
+ * @param clientsMsg - the msg.
+ */
 void whatsappServer::selfSend(string &user, int fd, const string &name, const string &clientsMsg) {
     string msg2 = "ERROR: failed to send";
     string end = " \"" + clientsMsg + "\" to " + name + ".";
     printSituation(user, PRIME + msg2 + end);
     string toWrite = msg2 + STR_END;
-    write(fd, toWrite.c_str(), toWrite.length() + 1);
+    write(fd, toWrite.c_str(), toWrite.length());
 }
 
+/**
+ * the main function of the whatsappServer.
+ * @param argc - num of inputs.
+ * @param argv - the pointer to the string input.
+ * @return
+ */
 int main(int argc, char **argv) {
     if (argc != 2) {
         cout << "Usage: whatsappServer portNum" << endl;

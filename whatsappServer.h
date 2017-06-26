@@ -46,7 +46,7 @@ public:
 
     void connection();
 
-    int runServer();
+    void runServer();
 
     int initConnection(int &newConnection, fd_set &fds) const;
 

@@ -104,8 +104,7 @@ void whatsappClient::readServerInput() {
 void whatsappClient::readUserInput() {
     char message[256];
     ssize_t bytes_read = read(STDIN_FILENO, message, 256);
-    message[bytes_read] = '\0';
-    string msg = (string) message;
+`    string msg = (string) message;
     if (msg.find("create_group") == 0){
         if (!checkCreateGroup(msg)){
             return;
