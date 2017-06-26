@@ -145,6 +145,7 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
     FileDesc file = it->second;
     string path = file.getPath();
     int b_read = 0;
+
     double blockSize = (double) blksize;
     long double start = floor(offset / blockSize);
     int end = (int) ceil((offset + count)/ blockSize);
@@ -156,7 +157,6 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
         char* curbuf;
         // Check if the block of the file exists in the cache
         CacheBlock *block = cache->readBlock(path, i);
-        int endOfRead;
         if (block != nullptr) {
             hits++;
             curbuf = block->buf;
@@ -172,11 +172,24 @@ int CacheFS_pread(int file_id, void *buf, size_t count, off_t offset) {
             CacheBlock *blockToAdd = new CacheBlock(path, i, curbuf, (int) blksize);
             cache->cacheBlock(blockToAdd);
         }
-        memcpy(buf, curbuf + (offset%blksize) , count);
+        // Calc count
+        int step, endPoint, startPoint;
+        if (i == end - 1) {
+            endPoint = (int) (offset + count);
+        } else {
+            endPoint = int ((i + 1) * blksize);
+        }
+        if (i == start) {
+            startPoint = (int) offset;
+        } else {
+            startPoint = (int) (i * blksize);
+        }
+        step = (int) (startPoint - offset);
+        memcpy((char *)buf + step, curbuf + (offset%blksize), (size_t) (endPoint - startPoint));
     }
-    int sizeOfFile = (int) filesize(path.c_str());
+    unsigned int sizeOfFile = (unsigned int) filesize(path.c_str());
     if(offset+count > sizeOfFile){
-        b_read = sizeOfFile- (int) offset;
+        b_read = sizeOfFile - (int) offset;
         if(b_read < 0){
             b_read = 0;
         }

@@ -1,6 +1,6 @@
 CPPFLAGS  =-std=c++11 -Wall -Wextra -g
 
-all: CacheFS.a TEST
+all: CacheFS.a
 
 CacheFS.o: CacheFS.cpp CacheFS.h FileDesc.h CacheBlock.h LRUCache.h LFUCache.h FBRCache.h
 	g++ $(CPPFLAGS) -c CacheFS.cpp

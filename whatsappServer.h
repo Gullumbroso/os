@@ -48,9 +48,9 @@ public:
 
     int runServer();
 
-    void initConnection(int &newConnection, fd_set &fds, int &returnVal) const;
+    int initConnection(int &newConnection, fd_set &fds) const;
 
-    void printSituation(string &msg, string msg2);
+    void printSituation(string msg, string msg2);
 
     void tryToConnect(char *message, int newConnection);
 

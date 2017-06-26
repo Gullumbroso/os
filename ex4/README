@@ -1,21 +1,19 @@
 avishadler,gullumbroso
 Avishay Adler 203538657, Gilad Lumbroso 204781694
-EX: 3
+EX: 4
 
 FILES:
-README -                 this file
-MapReduceClient.h -      the supplied header file for the MapReduceClient module
-MapReduceFramework.cpp - the MapReduceFramework module
-MapReduceFramework.h -   the supplied header file for the MapReduceFramework module
-Search.cpp -             specific program that utilizes the MapReduce framework
-Thread.cpp -             represents a Thread.
-Thread.h -               thread header file.
-ExecMapThread.cpp -      ExecMap thread class, representing a thread, its mutex and container;
-                         Inherits from Thread
-ExecMapThread.h  -       header file of ExecMap thread class
-ExecReduceThread.cpp -   ExecReduce thread class, representing a thread, its mutex and container;
-                         inherits from Thread
-ExecReduceThread.h -     header file of ExecReduce thread class
+CacheBlock.h, CacheBlock.cpp -      A class that represents a cache block.
+Cache.h, Cache.cpp -                An abstract class that represents the cache module, including
+ the caching method and priorities algorithm.
+FBRCache.h, FBRCache.cpp -          An override of the Cache class which implements a cache using
+ the FBR algorithm.
+LFUCache.h, LFUCache.cpp -          An override of the Cache class which implements a cache using
+ the LFU algorithm.
+LRUCache.h, LRUCache.cpp -          An override of the Cache class which implements a cache using
+ the LRU algorithm.
+FileDesc.h, FileDesc.cpp -          A class that represents a file object.
+README
 Makefile
 
 REMARKS:
